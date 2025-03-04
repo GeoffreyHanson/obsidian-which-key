@@ -1,7 +1,7 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, MarkdownEditView, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from 'obsidian';
 import { getHotkeysV2 } from './src/utils/hotkeyUtils'
 
-// Remember to rename these classes and interfaces!
+const { log } = console;
 
 interface MyPluginSettings {
   mySetting: string;
@@ -11,18 +11,147 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
   mySetting: 'default'
 }
 
+const whichKeyMappings = {
+    "f": { name: "+Files", children: {
+        "n": { name: "New File", commandId: "file-explorer:new-file" },
+        "m": { name: "Move File", commandId: "file-explorer:move-file" },
+        "r": { name: "Reveal File", commandId: "file-explorer:reveal-active-file" },
+    }},
+    "s": { name: "+Search", children: {
+        "f": { name: "Search File", commandId: "editor:open-search" },
+        "a": { name: "Search All Files", commandId: "global-search:open" },
+    }},
+    "w": { name: "+Workspace", children: {
+        "n": { name: "Next Tab", commandId: "workspace:next-tab" },
+        "p": { name: "Previous Tab", commandId: "workspace:previous-tab" },
+        "s": { name: "Split Right", commandId: "workspace:split-vertical" },
+    }},
+    "b": { name: "+Bookmarks", children: {
+        "o": { name: "Open Bookmarks", commandId: "bookmarks:open" },
+        "a": { name: "Bookmark All Tabs", commandId: "bookmarks:bookmark-all-tabs" },
+    }},
+    "g": { name: "+Graph", children: {
+        "o": { name: "Open Graph", commandId: "graph:open" },
+        "a": { name: "Animate Graph", commandId: "graph:animate" },
+    }},
+};
+
+function processCommands(app: App) {
+  const commands = app.commands.commands;
+  log("COMMANDS:", commands);
+  const categorizedCommands: Record<string, any> = {}; // Stores grouped commands
+
+  Object.entries(commands).forEach(([id, command]) => {
+      const [category, subCommand] = id.split(':'); // Extract prefix
+
+      if (!categorizedCommands[category]) {
+          categorizedCommands[category] = { name: `+${category}` }; // Initialize category
+      }
+
+      // Format for WhichKey display
+      categorizedCommands[category][subCommand] = {
+          name: command.name,
+          commandId: command.id,
+          icon: command.icon ?? '', // Some commands may not have an icon
+          hotkeys: command.hotkeys ?? [], // Store associated hotkeys
+          callback: command.callback || command.editorCallback || command.checkCallback, // Assign the correct function
+      };
+  });
+
+  log(categorizedCommands);
+  return categorizedCommands;
+}
+
+function findWhichKeyCommand(sequence: string) {
+  let node = whichKeyMappings;
+  for (const key of sequence.split("")) {
+    if (node[key]) {
+      node = node[key].children ?? node[key];
+
+      log('NODE:', node);
+      for (const key in node) {
+        log(key, node[key].name);
+      }
+    } else {
+      return null;
+    }
+  }
+  return node.commandId ? node : null;
+}
+
+function processKeyInput(keySequence: string) {
+  const command = findWhichKeyCommand(keySequence);
+  if (command && command.commandId) {
+    log("executing!");
+    this.app.commands.executeCommandById(command.commandId);
+  }
+}
+
 export default class MyPlugin extends Plugin {
   settings: MyPluginSettings;
 
+  recordingSequence = false;
+  currentKeySequence = ""
+
   async onload() {
+    log('loading...')
     await this.loadSettings();
 
-	// console.log(getHotkeysV2(this.app))
-    this.registerDomEvent(document, 'keydown', (evt: KeyboardEvent) => {
-      console.log('Key pressed:', evt.key);
-	  console.log(this.app.hotkeyManager.bakedHotkeys.filter((shortcut) => shortcut.modifiers === evt.key).map(shortcut => shortcut.key));
-		// console.log(getHotkeysV2(this.app));
+    processCommands(this.app);
+
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView)
+    log("VIEW", view)
+
+    // Listen for Vim keypress events inside of CodeMirror
+    const cm = view?.currentMode?.cm?.cm
+    cm.on("vim-keypress", (key: string) => {
+      log("Pressed", key);
+
+        log(cm.state)
+
+        log("overwrite", cm.state.vim.overwrite)
+
+        if (this.recordingSequence) {
+          cm.state.vim.insertMode = false;
+          cm.state.vim.mode = "normal"
+          log(cm.state.vim.insertMode);
+          log(cm.state.vim.mode);
+        }
+
+      if (key === "<Space>") {
+        this.recordingSequence = true;
+        this.currentKeySequence = "";
+
+        // Log curated shortcuts
+        for (const shortcutType in whichKeyMappings) {
+          log(shortcutType, whichKeyMappings[shortcutType].name);
+        }
+
+        return;
+      }
+
+      if (!this.recordingSequence) {
+        return;
+      }
+
+      this.currentKeySequence += key;
+
+      const matchedCommand = findWhichKeyCommand(this.currentKeySequence);
+
+
+      if (matchedCommand) {
+        processKeyInput(this.currentKeySequence);
+        this.recordingSequence = false;
+        this.currentKeySequence = "";
+      } else if (!Object.keys(whichKeyMappings).some(cmd => cmd.startsWith(this.currentKeySequence))) {
+        this.recordingSequence = false;
+        this.currentKeySequence = "";
+      }
     });
+    
+    const vim = view.editMode.editor.cm.cm.state.vim;
+    log("VIM:", vim);
+
 
     // // This creates an icon in the left ribbon.
     // const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
