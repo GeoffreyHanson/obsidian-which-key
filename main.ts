@@ -1,4 +1,5 @@
 import { App, Editor, MarkdownEditView, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from 'obsidian';
+import { EditorView, keymap, PluginValue, ViewPlugin, ViewUpdate } from '@codemirror/view'
 import { getHotkeysV2 } from './src/utils/hotkeyUtils'
 
 const { log } = console;
@@ -12,6 +13,9 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
 }
 
 const whichKeyMappings = {
+    " ": { name: "Quick switcher: Open quick switcher", commandId: "switcher:open", },
+    "/": { name: "Search All Files", commandId: "global-search:open" },
+    "e": { name: "Toggle left sidebar", commandId: "app:toggle-left-sidebar" },
     "f": { name: "+Files", children: {
         "n": { name: "New File", commandId: "file-explorer:new-file" },
         "m": { name: "Move File", commandId: "file-explorer:move-file" },
@@ -87,6 +91,61 @@ function processKeyInput(keySequence: string) {
   }
 }
 
+class CodeMirrorPlugin implements PluginValue {
+  constructor(view: EditorView) {
+    view.dom.addEventListener("keydown", this.handleKeyPress, true)
+  }
+
+  recordingSequence = false;
+  currentKeySequence = ""
+
+  interceptKeyPress = (event: KeyboardEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  handleKeyPress = (event: KeyboardEvent) => {
+    const { key } = event
+    
+    if (key === " " && !this.recordingSequence) {
+      log("Space Pressed");
+      this.recordingSequence = true;
+
+        // Log curated shortcuts
+        for (const shortcutType in whichKeyMappings) {
+          log(shortcutType, whichKeyMappings[shortcutType].name);
+        }
+
+      this.interceptKeyPress(event);
+      return;
+    }
+
+    if (!this.recordingSequence) return;
+
+    this.interceptKeyPress(event);
+    this.currentKeySequence += key;
+
+    const matchedCommand = findWhichKeyCommand(this.currentKeySequence);
+
+    if (matchedCommand) {
+      processKeyInput(this.currentKeySequence);
+      this.recordingSequence = false;
+      this.currentKeySequence = "";
+    } else if (!Object.keys(whichKeyMappings).some(cmd => cmd.startsWith(this.currentKeySequence))) {
+      this.recordingSequence = false;
+      this.currentKeySequence = "";
+    }
+  }
+  
+  update(update: ViewUpdate) {}
+  destroy() {
+      // view.dom.removeEventListener("keydown", this.handleKeyPress, true);
+      // document.removeEventListener("keydown", this.interceptKeyPress, true);
+  }
+}
+
+export const codeMirrorPlugin = ViewPlugin.fromClass(CodeMirrorPlugin);
+
 export default class MyPlugin extends Plugin {
   settings: MyPluginSettings;
 
@@ -98,72 +157,8 @@ export default class MyPlugin extends Plugin {
     await this.loadSettings();
 
     processCommands(this.app);
-
-    const view = this.app.workspace.getActiveViewOfType(MarkdownView)
-    log("VIEW", view)
-
-    // Listen for Vim keypress events inside of CodeMirror
-    const cm = view?.currentMode?.cm?.cm
-    cm.on("vim-keypress", (key: string) => {
-      log("Pressed", key);
-
-        log(cm.state)
-
-        log("overwrite", cm.state.vim.overwrite)
-
-        if (this.recordingSequence) {
-          cm.state.vim.insertMode = false;
-          cm.state.vim.mode = "normal"
-          log(cm.state.vim.insertMode);
-          log(cm.state.vim.mode);
-        }
-
-      if (key === "<Space>") {
-        this.recordingSequence = true;
-        this.currentKeySequence = "";
-
-        // Log curated shortcuts
-        for (const shortcutType in whichKeyMappings) {
-          log(shortcutType, whichKeyMappings[shortcutType].name);
-        }
-
-        return;
-      }
-
-      if (!this.recordingSequence) {
-        return;
-      }
-
-      this.currentKeySequence += key;
-
-      const matchedCommand = findWhichKeyCommand(this.currentKeySequence);
-
-
-      if (matchedCommand) {
-        processKeyInput(this.currentKeySequence);
-        this.recordingSequence = false;
-        this.currentKeySequence = "";
-      } else if (!Object.keys(whichKeyMappings).some(cmd => cmd.startsWith(this.currentKeySequence))) {
-        this.recordingSequence = false;
-        this.currentKeySequence = "";
-      }
-    });
     
-    const vim = view.editMode.editor.cm.cm.state.vim;
-    log("VIM:", vim);
-
-
-    // // This creates an icon in the left ribbon.
-    // const ribbonIconEl = this.addRibbonIcon('dice', 'Sample Plugin', (evt: MouseEvent) => {
-    //   // Called when the user clicks the icon.
-    //   new Notice('This is a notice!');
-    // });
-    // // Perform additional things with the ribbon
-    // ribbonIconEl.addClass('my-plugin-ribbon-class');
-
-    // // This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-    // const statusBarItemEl = this.addStatusBarItem();
-    // statusBarItemEl.setText('Status Bar Text');
+    this.registerEditorExtension(codeMirrorPlugin);
 
     // This adds a simple command that can be triggered anywhere
     this.addCommand({
