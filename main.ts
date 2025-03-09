@@ -1,6 +1,5 @@
-import { App, Editor, MarkdownEditView, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from 'obsidian';
-import { EditorView, keymap, PluginValue, ViewPlugin, ViewUpdate } from '@codemirror/view'
-import { getHotkeysV2 } from './src/utils/hotkeyUtils'
+import { App, Editor, MarkdownView, Modal, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { EditorView, PluginValue, ViewPlugin, ViewUpdate } from '@codemirror/view'
 
 const { log } = console;
 
@@ -212,9 +211,7 @@ export default class MyPlugin extends Plugin {
     this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
   }
 
-  onunload() {
-
-  }
+  onunload() {}
 
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
