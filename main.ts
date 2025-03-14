@@ -136,7 +136,7 @@ function processKeyInput(keySequence: string) {
 class CodeMirrorPlugin implements PluginValue {
   constructor(view: EditorView) {
     // Listens for key presses in vim mode
-    view.dom.addEventListener('keydown', this.handleKeyPress, true);
+    view.dom.addEventListener('keydown', this.handleEditorKeyPress, true);
   }
 
   insertMode = false;
@@ -148,7 +148,7 @@ class CodeMirrorPlugin implements PluginValue {
     event.stopPropagation();
   };
 
-  handleKeyPress = (event: KeyboardEvent) => {
+  handleEditorKeyPress = (event: KeyboardEvent) => {
     const { key } = event;
 
     if (key === ' ' && !this.recordingSequence && !this.insertMode) {
@@ -211,7 +211,6 @@ function globalKeyHandler(event: KeyboardEvent) {
 export default class MyPlugin extends Plugin {
   settings: MyPluginSettings;
 
-  insertMode = false;
   recordingSequence = false;
   currentKeySequence = '';
 
@@ -220,9 +219,10 @@ export default class MyPlugin extends Plugin {
     event.stopPropagation();
   };
 
-  handleKeyPress = (event: KeyboardEvent) => {
+  handleGlobalKeyPress = (event: KeyboardEvent) => {
     const { key } = event;
 
+    // TODO: Hack to handle listening outside of the editor view. Find a more appropriate way to do this.
     const focusedEditor = !!this.app.workspace.getActiveViewOfType(MarkdownView);
     log("editor focused", focusedEditor);
 
@@ -270,7 +270,7 @@ export default class MyPlugin extends Plugin {
 
     // If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
     // Using this function will automatically remove the event listener when this plugin is disabled.
-    this.registerDomEvent(document, 'keydown', this.handleKeyPress);
+    this.registerDomEvent(document, 'keydown', this.handleGlobalKeyPress);
 
     // This adds a simple command that can be triggered anywhere
     this.addCommand({
