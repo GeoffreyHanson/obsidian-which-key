@@ -128,11 +128,16 @@ function processKeyInput(keySequence: string) {
   }
 }
 
+/**
+ * This plugin intercepts key presses while in vim mode
+ */
 class CodeMirrorPlugin implements PluginValue {
   constructor(view: EditorView) {
+    // Listens for key presses in vim mode
     view.dom.addEventListener('keydown', this.handleKeyPress, true);
   }
 
+  insertMode = false;
   recordingSequence = false;
   currentKeySequence = '';
 
@@ -144,7 +149,7 @@ class CodeMirrorPlugin implements PluginValue {
   handleKeyPress = (event: KeyboardEvent) => {
     const { key } = event;
 
-    if (key === ' ' && !this.recordingSequence) {
+    if (key === ' ' && !this.recordingSequence && !this.insertMode) {
       log('Space Pressed');
       this.recordingSequence = true;
 
@@ -178,7 +183,11 @@ class CodeMirrorPlugin implements PluginValue {
     }
   };
 
-  update(update: ViewUpdate) {}
+  update(update: ViewUpdate) {
+    // @ts-expect-error, not typed
+    this.insertMode = update?.view?.cm?.state?.vim?.insertMode;
+    log('CM insertMode', this.insertMode);
+  }
   destroy() {
     // view.dom.removeEventListener("keydown", this.handleKeyPress, true);
     // document.removeEventListener("keydown", this.interceptKeyPress, true);
@@ -187,11 +196,67 @@ class CodeMirrorPlugin implements PluginValue {
 
 export const codeMirrorPlugin = ViewPlugin.fromClass(CodeMirrorPlugin);
 
+function globalKeyHandler(event: KeyboardEvent) {
+  // const activeView = this.app.workspace.getActiveView();
+  const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+  log(activeView);
+  if (activeView?.editMode?.editor?.cm?.cm.hasFocus()) {
+    log("currently in edit view");
+  }
+  log('globalKeyHandler', event);
+}
+
 export default class MyPlugin extends Plugin {
   settings: MyPluginSettings;
 
+  insertMode = false;
   recordingSequence = false;
   currentKeySequence = '';
+
+  interceptKeyPress = (event: KeyboardEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  handleKeyPress = (event: KeyboardEvent) => {
+    const { key } = event;
+
+    const focusedEditor = !!this.app.workspace.getActiveViewOfType(MarkdownView);
+    log("editor focused", focusedEditor);
+
+    if (key === ' ' && !this.recordingSequence && !focusedEditor) {
+      log('Space Pressed');
+      this.recordingSequence = true;
+
+      // Log curated shortcuts
+      for (const shortcutType in whichKeyMappings) {
+        log(shortcutType, whichKeyMappings[shortcutType].name);
+      }
+
+      this.interceptKeyPress(event);
+      return;
+    }
+
+    if (!this.recordingSequence) return;
+
+    this.interceptKeyPress(event);
+    this.currentKeySequence += key;
+
+    const matchedCommand = findWhichKeyCommand(this.currentKeySequence);
+
+    if (matchedCommand) {
+      processKeyInput(this.currentKeySequence);
+      this.recordingSequence = false;
+      this.currentKeySequence = '';
+    } else if (
+      !Object.keys(whichKeyMappings).some((cmd) =>
+        cmd.startsWith(this.currentKeySequence),
+      )
+    ) {
+      this.recordingSequence = false;
+      this.currentKeySequence = '';
+    }
+  };
 
   async onload() {
     log('loading...');
@@ -200,6 +265,10 @@ export default class MyPlugin extends Plugin {
     processCommands(this.app);
 
     this.registerEditorExtension(codeMirrorPlugin);
+
+    // If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
+    // Using this function will automatically remove the event listener when this plugin is disabled.
+    this.registerDomEvent(document, 'keydown', this.handleKeyPress);
 
     // This adds a simple command that can be triggered anywhere
     this.addCommand({
@@ -243,12 +312,6 @@ export default class MyPlugin extends Plugin {
 
     // This adds a settings tab so the user can configure various aspects of the plugin
     this.addSettingTab(new SampleSettingTab(this.app, this));
-
-    // If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-    // Using this function will automatically remove the event listener when this plugin is disabled.
-    this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-      console.log('click', evt);
-    });
 
     // When registering intervals, this function will automatically clear the interval when the plugin is disabled.
     this.registerInterval(
