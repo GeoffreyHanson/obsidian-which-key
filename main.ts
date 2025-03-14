@@ -24,7 +24,18 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
   mySetting: 'default',
 };
 
-const whichKeyMappings = {
+// Define types for the WhichKey mappings
+interface WhichKeyCommand {
+  name: string;
+  commandId?: string;
+  children?: Record<string, WhichKeyCommand>;
+}
+
+interface WhichKeyMappings {
+  [key: string]: WhichKeyCommand;
+}
+
+const whichKeyMappings: WhichKeyMappings = {
   ' ': {
     name: 'Quick switcher: Open quick switcher',
     commandId: 'switcher:open',
@@ -78,6 +89,29 @@ const whichKeyMappings = {
   },
 };
 
+// Define types for Obsidian commands
+interface ObsidianCommand {
+  id: string;
+  name: string;
+  icon?: string;
+  hotkeys?: string[];
+  callback?: (...args: any[]) => any;
+  editorCallback?: (editor: Editor, view: MarkdownView) => any;
+  checkCallback?: (checking: boolean) => boolean | void;
+}
+
+interface ObsidianCommands {
+  commands: Record<string, ObsidianCommand>;
+  executeCommandById(id: string): boolean;
+}
+
+// Extend the App interface to include commands
+declare module 'obsidian' {
+  interface App {
+    commands: ObsidianCommands;
+  }
+}
+
 function processCommands(app: App) {
   const commands = app.commands.commands;
   log('COMMANDS:', commands);
@@ -105,28 +139,98 @@ function processCommands(app: App) {
   return categorizedCommands;
 }
 
-function findWhichKeyCommand(sequence: string) {
-  let node = whichKeyMappings;
+function findWhichKeyCommand(sequence: string): WhichKeyCommand | null {
+  let node: WhichKeyCommand | WhichKeyMappings = whichKeyMappings;
   for (const key of sequence.split('')) {
-    if (node[key]) {
-      node = node[key].children ?? node[key];
+    if ((node as WhichKeyMappings)[key]) {
+      const nextNode: WhichKeyCommand = (node as WhichKeyMappings)[key];
+      node = nextNode.children ?? nextNode;
 
       log('NODE:', node);
-      for (const key in node) {
-        log(key, node[key].name);
+      for (const nodeKey in node) {
+        if (typeof node === 'object' && nodeKey in node) {
+          const item = (node as any)[nodeKey];
+          if (item && item.name) {
+            log(nodeKey, item.name);
+          }
+        }
       }
     } else {
       return null;
     }
   }
-  return node.commandId ? node : null;
+  return 'commandId' in node ? (node as WhichKeyCommand) : null;
 }
 
-function processKeyInput(keySequence: string) {
-  const command = findWhichKeyCommand(keySequence);
-  if (command && command.commandId) {
-    log('executing!');
-    this.app.commands.executeCommandById(command.commandId);
+/**
+ * Shared key handler function to process key events for both editor and global contexts
+ * This function centralizes the logic for handling key presses in both the editor and global contexts,
+ * reducing code duplication and making it easier to maintain.
+ * 
+ * @param event - The keyboard event to process
+ * @param context - An object containing the necessary context for processing the event
+ */
+function handleKeyPress(
+  event: KeyboardEvent,
+  context: {
+    app: App;
+    recordingSequence: boolean;
+    setRecordingSequence: (value: boolean) => void;
+    currentKeySequence: string;
+    setCurrentKeySequence: (value: string) => void;
+    interceptKeyPress: (event: KeyboardEvent) => void;
+    isActive: () => boolean;
+  }
+) {
+  const { key } = event;
+  const {
+    app,
+    recordingSequence,
+    setRecordingSequence,
+    currentKeySequence,
+    setCurrentKeySequence,
+    interceptKeyPress,
+    isActive
+  } = context;
+
+  // Check if we should start recording a sequence
+  if (key === ' ' && !recordingSequence && isActive()) {
+    log('Space Pressed');
+    setRecordingSequence(true);
+
+    // Log curated shortcuts
+    for (const shortcutType in whichKeyMappings) {
+      log(shortcutType, whichKeyMappings[shortcutType].name);
+    }
+
+    interceptKeyPress(event);
+    return;
+  }
+
+  if (!recordingSequence) return;
+
+  interceptKeyPress(event);
+  const newKeySequence = currentKeySequence + key;
+  setCurrentKeySequence(newKeySequence);
+
+  const matchedCommand = findWhichKeyCommand(newKeySequence);
+
+  if (matchedCommand) {
+    // Execute the command if it has a commandId
+    if (matchedCommand.commandId) {
+      log('executing!');
+      app.commands.executeCommandById(matchedCommand.commandId);
+    }
+    setRecordingSequence(false);
+    setCurrentKeySequence('');
+  } else if (
+    !Object.keys(whichKeyMappings).some((cmd) =>
+      cmd.startsWith(newKeySequence)
+    )
+  ) {
+    // Reset if no potential matches
+    setRecordingSequence(false);
+    setCurrentKeySequence('');
   }
 }
 
@@ -134,6 +238,12 @@ function processKeyInput(keySequence: string) {
  * This plugin intercepts key presses while in vim mode
  */
 class CodeMirrorPlugin implements PluginValue {
+  private static app: App;
+
+  static setApp(app: App) {
+    CodeMirrorPlugin.app = app;
+  }
+
   constructor(view: EditorView) {
     // Listens for key presses in vim mode
     view.dom.addEventListener('keydown', this.handleEditorKeyPress, true);
@@ -149,40 +259,19 @@ class CodeMirrorPlugin implements PluginValue {
   };
 
   handleEditorKeyPress = (event: KeyboardEvent) => {
-    const { key } = event;
-
-    if (key === ' ' && !this.recordingSequence && !this.insertMode) {
-      log('Space Pressed');
-      this.recordingSequence = true;
-
-      // Log curated shortcuts
-      for (const shortcutType in whichKeyMappings) {
-        log(shortcutType, whichKeyMappings[shortcutType].name);
-      }
-
-      this.interceptKeyPress(event);
-      return;
-    }
-
-    if (!this.recordingSequence) return;
-
-    this.interceptKeyPress(event);
-    this.currentKeySequence += key;
-
-    const matchedCommand = findWhichKeyCommand(this.currentKeySequence);
-
-    if (matchedCommand) {
-      processKeyInput(this.currentKeySequence);
-      this.recordingSequence = false;
-      this.currentKeySequence = '';
-    } else if (
-      !Object.keys(whichKeyMappings).some((cmd) =>
-        cmd.startsWith(this.currentKeySequence),
-      )
-    ) {
-      this.recordingSequence = false;
-      this.currentKeySequence = '';
-    }
+    handleKeyPress(event, {
+      app: CodeMirrorPlugin.app,
+      recordingSequence: this.recordingSequence,
+      setRecordingSequence: (value) => {
+        this.recordingSequence = value;
+      },
+      currentKeySequence: this.currentKeySequence,
+      setCurrentKeySequence: (value) => {
+        this.currentKeySequence = value;
+      },
+      interceptKeyPress: this.interceptKeyPress,
+      isActive: () => !this.insertMode
+    });
   };
 
   update(update: ViewUpdate) {
@@ -196,17 +285,10 @@ class CodeMirrorPlugin implements PluginValue {
   }
 }
 
-export const codeMirrorPlugin = ViewPlugin.fromClass(CodeMirrorPlugin);
-
-function globalKeyHandler(event: KeyboardEvent) {
-  // const activeView = this.app.workspace.getActiveView();
-  const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-  log(activeView);
-  if (activeView?.editMode?.editor?.cm?.cm.hasFocus()) {
-    log("currently in edit view");
-  }
-  log('globalKeyHandler', event);
-}
+export const codeMirrorPlugin = (app: App) => {
+  CodeMirrorPlugin.setApp(app);
+  return ViewPlugin.fromClass(CodeMirrorPlugin);
+};
 
 export default class MyPlugin extends Plugin {
   settings: MyPluginSettings;
@@ -220,44 +302,23 @@ export default class MyPlugin extends Plugin {
   };
 
   handleGlobalKeyPress = (event: KeyboardEvent) => {
-    const { key } = event;
-
-    // TODO: Hack to handle listening outside of the editor view. Find a more appropriate way to do this.
-    const focusedEditor = !!this.app.workspace.getActiveViewOfType(MarkdownView);
-    log("editor focused", focusedEditor);
-
-    if (key === ' ' && !this.recordingSequence && !focusedEditor) {
-      log('Space Pressed');
-      this.recordingSequence = true;
-
-      // Log curated shortcuts
-      for (const shortcutType in whichKeyMappings) {
-        log(shortcutType, whichKeyMappings[shortcutType].name);
+    handleKeyPress(event, {
+      app: this.app,
+      recordingSequence: this.recordingSequence,
+      setRecordingSequence: (value) => {
+        this.recordingSequence = value;
+      },
+      currentKeySequence: this.currentKeySequence,
+      setCurrentKeySequence: (value) => {
+        this.currentKeySequence = value;
+      },
+      interceptKeyPress: this.interceptKeyPress,
+      isActive: () => {
+        // Check if we're not in an editor view
+        const focusedEditor = !!this.app.workspace.getActiveViewOfType(MarkdownView);
+        return !focusedEditor;
       }
-
-      this.interceptKeyPress(event);
-      return;
-    }
-
-    if (!this.recordingSequence) return;
-
-    this.interceptKeyPress(event);
-    this.currentKeySequence += key;
-
-    const matchedCommand = findWhichKeyCommand(this.currentKeySequence);
-
-    if (matchedCommand) {
-      processKeyInput(this.currentKeySequence);
-      this.recordingSequence = false;
-      this.currentKeySequence = '';
-    } else if (
-      !Object.keys(whichKeyMappings).some((cmd) =>
-        cmd.startsWith(this.currentKeySequence),
-      )
-    ) {
-      this.recordingSequence = false;
-      this.currentKeySequence = '';
-    }
+    });
   };
 
   async onload() {
@@ -266,7 +327,7 @@ export default class MyPlugin extends Plugin {
 
     processCommands(this.app);
 
-    this.registerEditorExtension(codeMirrorPlugin);
+    this.registerEditorExtension(codeMirrorPlugin(this.app));
 
     // If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
     // Using this function will automatically remove the event listener when this plugin is disabled.
