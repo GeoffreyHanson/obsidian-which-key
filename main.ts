@@ -34,8 +34,10 @@ const whichKeyMappings = {
   f: {
     name: '+Files',
     children: {
+      d: { name: 'New Directory', commandId: 'file-explorer:new-folder' },
       n: { name: 'New File', commandId: 'file-explorer:new-file' },
       m: { name: 'Move File', commandId: 'file-explorer:move-file' },
+      o: { name: 'Open File', commandId: 'file-explorer:open' },
       r: {
         name: 'Reveal File',
         commandId: 'file-explorer:reveal-active-file',
