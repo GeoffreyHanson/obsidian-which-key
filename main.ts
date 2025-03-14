@@ -223,85 +223,42 @@ function handleKeyPress(
     }
     setRecordingSequence(false);
     setCurrentKeySequence('');
-  } else if (
+  } 
+  // Reset if no potential matches
+  else if (
     !Object.keys(whichKeyMappings).some((cmd) =>
       cmd.startsWith(newKeySequence)
     )
   ) {
-    // Reset if no potential matches
     setRecordingSequence(false);
     setCurrentKeySequence('');
   }
 }
 
 /**
- * This plugin intercepts key presses while in vim mode
+ * Manages the state for key sequence recording and processing
+ * This class centralizes the state management for both editor and global contexts
  */
-class CodeMirrorPlugin implements PluginValue {
-  private static app: App;
-
-  static setApp(app: App) {
-    CodeMirrorPlugin.app = app;
-  }
-
-  constructor(view: EditorView) {
-    // Listens for key presses in vim mode
-    view.dom.addEventListener('keydown', this.handleEditorKeyPress, true);
-  }
-
-  insertMode = false;
+class KeySequenceManager {
+  private app: App;
   recordingSequence = false;
   currentKeySequence = '';
+
+  constructor(app: App) {
+    this.app = app;
+  }
 
   interceptKeyPress = (event: KeyboardEvent) => {
     event.preventDefault();
     event.stopPropagation();
   };
 
-  handleEditorKeyPress = (event: KeyboardEvent) => {
-    handleKeyPress(event, {
-      app: CodeMirrorPlugin.app,
-      recordingSequence: this.recordingSequence,
-      setRecordingSequence: (value) => {
-        this.recordingSequence = value;
-      },
-      currentKeySequence: this.currentKeySequence,
-      setCurrentKeySequence: (value) => {
-        this.currentKeySequence = value;
-      },
-      interceptKeyPress: this.interceptKeyPress,
-      isActive: () => !this.insertMode
-    });
-  };
-
-  update(update: ViewUpdate) {
-    // @ts-expect-error, not typed
-    this.insertMode = update?.view?.cm?.state?.vim?.insertMode;
-    log('CM insertMode', this.insertMode);
-  }
-  destroy() {
-    // view.dom.removeEventListener("keydown", this.handleKeyPress, true);
-    // document.removeEventListener("keydown", this.interceptKeyPress, true);
-  }
-}
-
-export const codeMirrorPlugin = (app: App) => {
-  CodeMirrorPlugin.setApp(app);
-  return ViewPlugin.fromClass(CodeMirrorPlugin);
-};
-
-export default class MyPlugin extends Plugin {
-  settings: MyPluginSettings;
-
-  recordingSequence = false;
-  currentKeySequence = '';
-
-  interceptKeyPress = (event: KeyboardEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-  };
-
-  handleGlobalKeyPress = (event: KeyboardEvent) => {
+  /**
+   * Process a key event with the given isActive condition
+   * @param event - The keyboard event to process
+   * @param isActive - Function that determines if key handling should be active
+   */
+  handleKeyEvent = (event: KeyboardEvent, isActive: () => boolean) => {
     handleKeyPress(event, {
       app: this.app,
       recordingSequence: this.recordingSequence,
@@ -313,11 +270,57 @@ export default class MyPlugin extends Plugin {
         this.currentKeySequence = value;
       },
       interceptKeyPress: this.interceptKeyPress,
-      isActive: () => {
-        // Check if we're not in an editor view
-        const focusedEditor = !!this.app.workspace.getActiveViewOfType(MarkdownView);
-        return !focusedEditor;
-      }
+      isActive
+    });
+  };
+}
+
+/**
+ * This plugin intercepts key presses while in vim mode
+ */
+class CodeMirrorPlugin implements PluginValue {
+  private static keyManager: KeySequenceManager;
+  insertMode = false;
+
+  static setKeyManager(keyManager: KeySequenceManager) {
+    CodeMirrorPlugin.keyManager = keyManager;
+  }
+
+  constructor(view: EditorView) {
+    // Listens for key presses in vim mode
+    view.dom.addEventListener('keydown', this.handleEditorKeyPress, true);
+  }
+
+  handleEditorKeyPress = (event: KeyboardEvent) => {
+    CodeMirrorPlugin.keyManager.handleKeyEvent(event, () => !this.insertMode);
+  };
+
+  update(update: ViewUpdate) {
+    // @ts-expect-error, not typed
+    this.insertMode = update?.view?.cm?.state?.vim?.insertMode;
+    log('CM insertMode', this.insertMode);
+  }
+  
+  destroy() {
+    // view.dom.removeEventListener("keydown", this.handleKeyPress, true);
+    // document.removeEventListener("keydown", this.interceptKeyPress, true);
+  }
+}
+
+export const codeMirrorPlugin = (keyManager: KeySequenceManager) => {
+  CodeMirrorPlugin.setKeyManager(keyManager);
+  return ViewPlugin.fromClass(CodeMirrorPlugin);
+};
+
+export default class MyPlugin extends Plugin {
+  settings: MyPluginSettings;
+  keyManager: KeySequenceManager;
+
+  handleGlobalKeyPress = (event: KeyboardEvent) => {
+    this.keyManager.handleKeyEvent(event, () => {
+      // Check if we're not in an editor view
+      const focusedEditor = !!this.app.workspace.getActiveViewOfType(MarkdownView);
+      return !focusedEditor;
     });
   };
 
@@ -325,9 +328,12 @@ export default class MyPlugin extends Plugin {
     log('loading...');
     await this.loadSettings();
 
+    // Initialize the shared key manager
+    this.keyManager = new KeySequenceManager(this.app);
+
     processCommands(this.app);
 
-    this.registerEditorExtension(codeMirrorPlugin(this.app));
+    this.registerEditorExtension(codeMirrorPlugin(this.keyManager));
 
     // If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
     // Using this function will automatically remove the event listener when this plugin is disabled.
