@@ -1,18 +1,5 @@
-import {
-  App,
-  Editor,
-  MarkdownView,
-  Modal,
-  Plugin,
-  PluginSettingTab,
-  Setting,
-} from 'obsidian';
-import {
-  EditorView,
-  PluginValue,
-  ViewPlugin,
-  ViewUpdate,
-} from '@codemirror/view';
+import { App, Editor, MarkdownView, Modal, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { EditorView, PluginValue, ViewPlugin, ViewUpdate } from '@codemirror/view';
 
 const { log } = console;
 
@@ -130,8 +117,7 @@ function processCommands(app: App) {
       commandId: command.id,
       icon: command.icon ?? '', // Some commands may not have an icon
       hotkeys: command.hotkeys ?? [], // Store associated hotkeys
-      callback:
-        command.callback || command.editorCallback || command.checkCallback, // Assign the correct function
+      callback: command.callback || command.editorCallback || command.checkCallback, // Assign the correct function
     };
   });
 
@@ -166,7 +152,7 @@ function findWhichKeyCommand(sequence: string): WhichKeyCommand | null {
  * Shared key handler function to process key events for both editor and global contexts
  * This function centralizes the logic for handling key presses in both the editor and global contexts,
  * reducing code duplication and making it easier to maintain.
- * 
+ *
  * @param event - The keyboard event to process
  * @param context - An object containing the necessary context for processing the event
  */
@@ -190,7 +176,7 @@ function handleKeyPress(
     currentKeySequence,
     setCurrentKeySequence,
     interceptKeyPress,
-    isActive
+    isActive,
   } = context;
 
   // Check if we should start recording a sequence
@@ -223,13 +209,9 @@ function handleKeyPress(
     }
     setRecordingSequence(false);
     setCurrentKeySequence('');
-  } 
+  }
   // Reset if no potential matches
-  else if (
-    !Object.keys(whichKeyMappings).some((cmd) =>
-      cmd.startsWith(newKeySequence)
-    )
-  ) {
+  else if (!Object.keys(whichKeyMappings).some(cmd => cmd.startsWith(newKeySequence))) {
     setRecordingSequence(false);
     setCurrentKeySequence('');
   }
@@ -279,15 +261,15 @@ class KeySequenceManager {
     handleKeyPress(event, {
       app: this.app,
       recordingSequence: this.recordingSequence,
-      setRecordingSequence: (value) => {
+      setRecordingSequence: value => {
         this.recordingSequence = value;
       },
       currentKeySequence: this.currentKeySequence,
-      setCurrentKeySequence: (value) => {
+      setCurrentKeySequence: value => {
         this.currentKeySequence = value;
       },
       interceptKeyPress: this.interceptKeyPress,
-      isActive: () => this.isKeyHandlingActive()
+      isActive: () => this.isKeyHandlingActive(),
     });
   };
 }
@@ -316,7 +298,7 @@ class CodeMirrorPlugin implements PluginValue {
     CodeMirrorPlugin.keyManager.setInsertMode(insertMode);
     log('CM insertMode', insertMode);
   }
-  
+
   destroy() {
     // view.dom.removeEventListener("keydown", this.handleKeyPress, true);
     // document.removeEventListener("keydown", this.interceptKeyPress, true);
@@ -376,8 +358,7 @@ export default class MyPlugin extends Plugin {
       name: 'Open sample modal (complex)',
       checkCallback: (checking: boolean) => {
         // Conditions to check
-        const markdownView =
-          this.app.workspace.getActiveViewOfType(MarkdownView);
+        const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
         if (markdownView) {
           // If checking is true, we're simply "checking" if the command can be run.
           // If checking is false, then we want to actually perform the operation.
@@ -395,9 +376,7 @@ export default class MyPlugin extends Plugin {
     this.addSettingTab(new SampleSettingTab(this.app, this));
 
     // When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-    this.registerInterval(
-      window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000),
-    );
+    this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
   }
 
   onunload() {}
@@ -443,14 +422,14 @@ class SampleSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('Setting #1')
       .setDesc("It's a secret")
-      .addText((text) =>
+      .addText(text =>
         text
           .setPlaceholder('Enter your secret')
           .setValue(this.plugin.settings.mySetting)
-          .onChange(async (value) => {
+          .onChange(async value => {
             this.plugin.settings.mySetting = value;
             await this.plugin.saveSettings();
-          }),
+          })
       );
   }
 }
