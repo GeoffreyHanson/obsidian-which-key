@@ -100,8 +100,7 @@ declare module 'obsidian' {
 }
 
 function processCommands(app: App) {
-  const commands = app.commands.commands;
-  log('COMMANDS:', commands);
+  const { commands } = app.commands;
   const categorizedCommands: Record<string, any> = {}; // Stores grouped commands
 
   Object.entries(commands).forEach(([id, command]) => {
@@ -284,6 +283,7 @@ class CodeMirrorPlugin implements PluginValue {
     CodeMirrorPlugin.keyManager = keyManager;
   }
 
+  // Event listener for vim mode
   constructor(view: EditorView) {
     view.dom.addEventListener('keydown', this.handleEditorKeyPress, true);
   }
@@ -329,6 +329,7 @@ export default class MyPlugin extends Plugin {
 
     this.registerEditorExtension(codeMirrorPlugin(this.keyManager));
 
+    // TODO: Adding to the whole document can be overbearing. Perhaps add event listeners to individual elements instead.
     // If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
     // Using this function will automatically remove the event listener when this plugin is disabled.
     this.registerDomEvent(document, 'keydown', this.handleGlobalKeyPress);
