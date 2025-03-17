@@ -215,6 +215,22 @@ function updateKeySequence(
   }
 }
 
+class WhichKeyUI {
+  private app: App;
+  private container: HTMLElement;
+
+  constructor(app: App) {
+    this.app = app;
+    this.createContainer();
+  }
+
+  private createContainer() {
+    this.container = document.createElement('div');
+    this.container.addClass('which-key-container');
+    document.body.appendChild(this.container);
+  }
+}
+
 /**
  * Manages the state for key sequence recording and processing
  */
@@ -223,9 +239,11 @@ class SharedState {
   private isRecording = false;
   private currentKeySequence = '';
   private _insertMode = false;
+  private ui: WhichKeyUI;
 
   constructor(app: App) {
     this.app = app;
+    this.ui = new WhichKeyUI(app);
   }
 
   get insertMode(): boolean {

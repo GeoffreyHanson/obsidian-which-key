@@ -1,0 +1,19 @@
+/*
+
+This CSS file will be included with your plugin, and
+available in the app when your plugin is enabled.
+
+If your plugin does not need CSS, delete this file.
+
+*/
+
+.which-key-container {
+    position: fixed;
+    top: auto;
+    bottom: 35px;
+    right: 10px;
+    width: 30%;
+    height: 50%;
+    background-color: var(--background-secondary);
+    /* z-index: 100; */
+}
