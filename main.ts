@@ -236,14 +236,6 @@ class SharedState {
     this._insertMode = value;
   }
 
-  getIsRecording(): boolean {
-    return this.isRecording;
-  }
-
-  getCurrentKeySequence(): string {
-    return this.currentKeySequence;
-  }
-
   interceptKeyPress = (event: KeyboardEvent) => {
     event.preventDefault();
     event.stopPropagation();
@@ -273,12 +265,12 @@ class SharedState {
 /**
  * This plugin intercepts key presses while in vim mode
  */
-class CodeMirrorPlugin implements PluginValue {
+class WhichKeyEditorPlugin implements PluginValue {
   private static sharedState: SharedState;
   private view: EditorView;
 
   static setKeyManager(sharedState: SharedState) {
-    CodeMirrorPlugin.sharedState = sharedState;
+    WhichKeyEditorPlugin.sharedState = sharedState;
   }
 
   // Event listener for vim mode
@@ -289,15 +281,15 @@ class CodeMirrorPlugin implements PluginValue {
 
   handleEditorKeyPress = (event: KeyboardEvent) => {
     // Only handle key presses when not in insert mode
-    if (!CodeMirrorPlugin.sharedState.insertMode) {
-      CodeMirrorPlugin.sharedState.handleKeyPress(event);
+    if (!WhichKeyEditorPlugin.sharedState.insertMode) {
+      WhichKeyEditorPlugin.sharedState.handleKeyPress(event);
     }
   };
 
   update(update: ViewUpdate) {
     // @ts-expect-error, not typed
     const insertMode = update?.view?.cm?.state?.vim?.insertMode;
-    CodeMirrorPlugin.sharedState.insertMode = insertMode;
+    WhichKeyEditorPlugin.sharedState.insertMode = insertMode;
     log('CM insertMode', insertMode);
   }
 
@@ -307,8 +299,8 @@ class CodeMirrorPlugin implements PluginValue {
 }
 
 export const codeMirrorPlugin = (keyManager: SharedState) => {
-  CodeMirrorPlugin.setKeyManager(keyManager);
-  return ViewPlugin.fromClass(CodeMirrorPlugin);
+  WhichKeyEditorPlugin.setKeyManager(keyManager);
+  return ViewPlugin.fromClass(WhichKeyEditorPlugin);
 };
 
 export default class WhichKey extends Plugin {
