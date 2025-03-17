@@ -203,16 +203,16 @@ function updateKeySequence(
 
   const getCommand = resolveCommandId(currentKeySequence);
 
-  if (!getCommand) {
-    return;
+  if (getCommand) {
+    if (getCommand.commandId) {
+      app.commands.executeCommandById(getCommand.commandId);
+    }
+    setRecordingSequence(false);
+    setCurrentKeySequence('');
+  } else if (!Object.keys(whichKeyMappings).some(cmd => cmd.startsWith(currentKeySequence))) {
+    setRecordingSequence(false);
+    setCurrentKeySequence('');
   }
-
-  if (getCommand?.commandId) {
-    app.commands.executeCommandById(getCommand.commandId);
-  }
-
-  setRecordingSequence(false);
-  setCurrentKeySequence('');
 }
 
 /**
@@ -275,6 +275,7 @@ class SharedState {
  */
 class CodeMirrorPlugin implements PluginValue {
   private static sharedState: SharedState;
+  private view: EditorView;
 
   static setKeyManager(sharedState: SharedState) {
     CodeMirrorPlugin.sharedState = sharedState;
@@ -282,6 +283,7 @@ class CodeMirrorPlugin implements PluginValue {
 
   // Event listener for vim mode
   constructor(view: EditorView) {
+    this.view = view;
     view.dom.addEventListener('keydown', this.handleEditorKeyPress, true);
   }
 
@@ -300,8 +302,7 @@ class CodeMirrorPlugin implements PluginValue {
   }
 
   destroy() {
-    // view.dom.removeEventListener("keydown", this.handleKeyPress, true);
-    // document.removeEventListener("keydown", this.interceptKeyPress, true);
+    this.view.dom.removeEventListener('keydown', this.handleEditorKeyPress, true);
   }
 }
 
