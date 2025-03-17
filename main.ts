@@ -222,14 +222,18 @@ class SharedState {
   private app: App;
   private isRecording = false;
   private currentKeySequence = '';
-  private insertMode = false;
+  private _insertMode = false;
 
   constructor(app: App) {
     this.app = app;
   }
 
-  setInsertMode(value: boolean) {
-    this.insertMode = value;
+  get insertMode(): boolean {
+    return this._insertMode;
+  }
+
+  set insertMode(value: boolean) {
+    this._insertMode = value;
   }
 
   getIsRecording(): boolean {
@@ -245,6 +249,9 @@ class SharedState {
     event.stopPropagation();
   };
 
+  // Only handle key presses when in not in insert mode or when the editor is not focused
+  // insert mode handled by the CodeMirrorPlugin
+  // This should handle the editor not being focused
   handleKeyPress = (event: KeyboardEvent) => {
     const context = {
       app: this.app,
@@ -279,13 +286,16 @@ class CodeMirrorPlugin implements PluginValue {
   }
 
   handleEditorKeyPress = (event: KeyboardEvent) => {
-    CodeMirrorPlugin.sharedState.handleKeyPress(event);
+    // Only handle key presses when not in insert mode
+    if (!CodeMirrorPlugin.sharedState.insertMode) {
+      CodeMirrorPlugin.sharedState.handleKeyPress(event);
+    }
   };
 
   update(update: ViewUpdate) {
     // @ts-expect-error, not typed
     const insertMode = update?.view?.cm?.state?.vim?.insertMode;
-    CodeMirrorPlugin.sharedState.setInsertMode(insertMode);
+    CodeMirrorPlugin.sharedState.insertMode = insertMode;
     log('CM insertMode', insertMode);
   }
 
@@ -314,11 +324,8 @@ export default class WhichKey extends Plugin {
     this.sharedState = new SharedState(this.app);
     this.registerEditorExtension(codeMirrorPlugin(this.sharedState));
 
-    // TODO: Adding to the whole document can be overbearing. Perhaps add event listeners to individual elements instead.
-    const isEditorFocused = !!this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (isEditorFocused) {
-      this.registerDomEvent(document, 'keydown', this.sharedState.handleKeyPress);
-    }
+    // Temporarily disabled
+    // this.registerDomEvent(document, 'keydown', this.sharedState.handleKeyPress);
 
     // This adds a simple command that can be triggered anywhere
     this.addCommand({
