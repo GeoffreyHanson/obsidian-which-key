@@ -136,7 +136,7 @@ function resolveCommandId(keySequence: string): WhichKeyCommand | null {
     if (key in possibleKeyMappings) {
       const currentNode = possibleKeyMappings[key];
       possibleKeyMappings = currentNode.children ?? currentNode;
-      log('nextNode', currentNode);
+      log('currentNode', currentNode);
       log('possibilities:', possibleKeyMappings);
 
       for (const nodeKey in possibleKeyMappings) {
@@ -218,16 +218,53 @@ function updateKeySequence(
 class WhichKeyUI {
   private app: App;
   private container: HTMLElement;
+  private visible = false;
+  private sharedState: SharedState;
 
-  constructor(app: App) {
+  constructor(app: App, sharedState: SharedState) {
     this.app = app;
-    this.createContainer();
+    this.sharedState = sharedState;
+    // this.createContainer();
   }
 
   private createContainer() {
     this.container = document.createElement('div');
     this.container.addClass('which-key-container');
+
+    // Container Title
+    const keyPressed = document.createElement('div');
+    keyPressed.addClass('which-key-pressed');
+    this.container.appendChild(keyPressed);
+
+    // Possible Commands
+    const possibleCommands = document.createElement('div');
+    possibleCommands.addClass('which-key-commands');
+    this.container.appendChild(possibleCommands);
+
+    // Add container to the DOM
     document.body.appendChild(this.container);
+  }
+
+  show() {
+    const title = this.container.querySelector('.which-key-pressed');
+
+    const commands = this.container.querySelector('.which-key-commands');
+    if (commands) {
+      commands.innerHTML = '';
+
+      for (const shortcutType in whichKeyMappings) {
+        log(shortcutType, whichKeyMappings[shortcutType].name);
+        const command = document.createElement('div');
+        command.addClass('which-key-command');
+        command.innerHTML = `${shortcutType}: ${whichKeyMappings[shortcutType].name}`;
+        commands.appendChild(command);
+      }
+    }
+  }
+
+  update(key: string) {
+    log('update', key);
+    this.show();
   }
 }
 
@@ -243,7 +280,10 @@ class SharedState {
 
   constructor(app: App) {
     this.app = app;
-    this.ui = new WhichKeyUI(app);
+  }
+
+  setUI(ui: WhichKeyUI) {
+    this.ui = ui;
   }
 
   get insertMode(): boolean {
@@ -272,6 +312,7 @@ class SharedState {
       currentKeySequence: this.currentKeySequence,
       setCurrentKeySequence: (value: string) => {
         this.currentKeySequence = value;
+        this.ui.show();
       },
       interceptKeyPress: this.interceptKeyPress,
     };
@@ -334,6 +375,7 @@ export default class WhichKey extends Plugin {
     // Initialize shared state
     this.sharedState = new SharedState(this.app);
     this.registerEditorExtension(codeMirrorPlugin(this.sharedState));
+    // this.sharedState.setUI(new WhichKeyUI(this.app, this.sharedState));
 
     // Temporarily disabled
     // this.registerDomEvent(document, 'keydown', this.sharedState.handleKeyPress);
