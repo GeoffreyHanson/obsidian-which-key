@@ -99,96 +99,234 @@ const whichKeyMappings: WhichKeyMappings = {
   },
 };
 
-// TODO: Process customized commands ahead of non-customized
-/** Process commands before they are added to the WhichKey mappings */
-function categorizeCommands(app: App) {
-  const { commands } = app.commands;
-  const categorizedCommands: Record<string, any> = {}; // Stores grouped commands
+class TrieNode {
+  children: Map<string, TrieNode>;
+  name?: string;
+  commandId?: string;
+  isEndOfCommand: boolean;
 
-  Object.entries(commands).forEach(([id, command]) => {
-    const [category, subCommand] = id.split(':'); // Extract prefix
-
-    if (!categorizedCommands[category]) {
-      categorizedCommands[category] = { name: `+${category}` }; // Initialize category
-    }
-
-    // Format for WhichKey display
-    categorizedCommands[category][subCommand] = {
-      name: command.name,
-      commandId: command.id,
-      icon: command.icon ?? '', // Some commands may not have an icon
-      hotkeys: command.hotkeys ?? [], // Store associated hotkeys
-      callback: command.callback || command.editorCallback || command.checkCallback, // Assign the correct function
-    };
-  });
-
-  log(categorizedCommands);
-  return categorizedCommands;
+  constructor() {
+    this.children = new Map();
+    this.isEndOfCommand = false;
+  }
 }
 
-function resolveCommandId(keySequence: string): WhichKeyCommand | null {
-  log('sequence', keySequence);
-  let possibleKeyMappings: WhichKeyCommand | WhichKeyMappings = whichKeyMappings;
+class CommandTrie {
+  root: TrieNode;
 
-  for (const key of keySequence.split('')) {
-    log('key', key);
-
-    if (key in possibleKeyMappings) {
-      const currentNode = possibleKeyMappings[key];
-      possibleKeyMappings = currentNode.children ?? currentNode;
-      log('currentNode', currentNode);
-      log('possibilities:', possibleKeyMappings);
-
-      for (const nodeKey in possibleKeyMappings) {
-        // if (typeof possibleKeyMappings === 'object' && nodeKey in possibleKeyMappings) {
-        if (nodeKey in possibleKeyMappings) {
-          const item = (possibleKeyMappings as any)[nodeKey];
-          if (item && item.name) {
-            log('nodeKey:', nodeKey, 'item name:', item.name);
-          }
-        }
-      }
-    } else {
-      return null;
-    }
+  constructor() {
+    this.root = new TrieNode();
   }
 
-  return 'commandId' in possibleKeyMappings ? (possibleKeyMappings as WhichKeyCommand) : null;
+  insert(sequence: string, command: WhichKeyCommand) {
+    let current = this.root;
+
+    for (const key of sequence) {
+      if (!current.children.has(key)) {
+        current.children.set(key, new TrieNode());
+      }
+      const next = current.children.get(key);
+      if (next) {
+        current = next;
+      } else {
+        // Handle the unlikely case where the node doesn't exist
+        return;
+      }
+    }
+
+    current.name = command.name;
+    current.commandId = command.commandId;
+    current.isEndOfCommand = true;
+  }
+
+  search(sequence: string): WhichKeyCommand | null {
+    log('in search:', sequence);
+    let current = this.root;
+
+    for (const key of sequence) {
+      if (!current.children.has(key)) {
+        return null;
+      }
+      const next = current.children.get(key);
+      if (!next) {
+        return null;
+      }
+      current = next;
+    }
+    log('current', current);
+    const result = current.isEndOfCommand
+      ? { name: current.name || '', commandId: current.commandId }
+      : null;
+    log('search result', result);
+    return result;
+  }
+
+  // Get all possible completions for a prefix
+  getPossibleCommands(prefix: string): Array<{ key: string; command: WhichKeyCommand }> {
+    let current = this.root;
+
+    // Navigate to prefix node
+    for (const key of prefix) {
+      if (!current.children.has(key)) {
+        return [];
+      }
+      const next = current.children.get(key);
+      if (!next) {
+        return [];
+      }
+      current = next;
+    }
+
+    const possibilities: Array<{ key: string; command: WhichKeyCommand }> = [];
+
+    // Get immediate children
+    current.children.forEach((node, key) => {
+      if (node.name) {
+        possibilities.push({
+          key,
+          command: {
+            name: node.name,
+            commandId: node.commandId,
+          },
+        });
+      }
+    });
+
+    return possibilities;
+  }
+
+  // Add method to handle nested commands
+  insertNestedCommand(prefix: string, command: ObsidianCommand) {
+    // Get category and action from command ID
+    const [category, action] = command.id.split(':');
+
+    try {
+      // First, organize commands by category
+      // We'll create a first-level organization using just the first letter of the category
+      const categoryKey = category[0].toLowerCase();
+
+      // For the action, just take the first letter of the first word
+      // This creates hierarchical navigation like space > f > n (for file > new file)
+      const firstWord = command.name.split(/\s+/)[0];
+      const actionKey = firstWord ? firstWord[0].toLowerCase() : '';
+
+      if (categoryKey && actionKey) {
+        // Create a two-level sequence: category letter + action letter
+        log(
+          'Adding hierarchical command:',
+          command.name,
+          'with sequence:',
+          `${categoryKey}${actionKey}`
+        );
+
+        this.insert(`${categoryKey}${actionKey}`, {
+          name: command.name,
+          commandId: command.id,
+        });
+      }
+
+      // Also add hotkeys as alternative paths
+      if (command.hotkeys?.length) {
+        command.hotkeys.forEach(hotkey => {
+          if (typeof hotkey === 'string' && hotkey.length > 0) {
+            this.insert(hotkey, {
+              name: command.name,
+              commandId: command.id,
+            });
+          }
+        });
+      }
+    } catch (err) {
+      log('Error processing command', command.id, err);
+    }
+  }
+}
+
+function categorizeCommands(app: App) {
+  const { commands } = app.commands;
+  const commandTrie = new CommandTrie();
+
+  // Log a sample command to see structure
+  const sampleCommand = Object.entries(commands)[0];
+  log('Sample command structure:', sampleCommand);
+
+  Object.entries(commands).forEach(([id, command]) => {
+    try {
+      // Insert the command into the trie
+      commandTrie.insertNestedCommand(id, {
+        id: command.id,
+        name: command.name,
+        icon: command.icon,
+        hotkeys: command.hotkeys,
+        callback: command.callback || command.editorCallback || command.checkCallback,
+      });
+    } catch (err) {
+      log('Error categorizing command', id, err);
+    }
+  });
+
+  log('Command Trie built successfully');
+  log(commandTrie);
+  return commandTrie;
+}
+
+function resolveCommandTrie(commandTrie: CommandTrie, keySequence: string): WhichKeyCommand | null {
+  let currentNode = commandTrie.root;
+
+  // Special case for space as trigger
+  if (keySequence === ' ') {
+    // Return a special command that indicates we're showing the root menu
+    return { name: 'WhichKey Menu', commandId: null };
+  }
+
+  for (const key of keySequence) {
+    if (!currentNode.children.has(key)) {
+      return null;
+    }
+    currentNode = currentNode.children.get(key)!;
+  }
+
+  return currentNode.isEndOfCommand
+    ? { name: currentNode.name || '', commandId: currentNode.commandId }
+    : null;
 }
 
 /**
  * Shared key handler function to process key events for both editor and global contexts
- * This function centralizes the logic for handling key presses in both the editor and global contexts,
- * reducing code duplication and making it easier to maintain.
- *
- * @param event - The keyboard event to process
- * @param context - An object containing the necessary context for processing the event
  */
 function updateKeySequence(
   event: KeyboardEvent,
   context: {
     app: App;
+    commandTrie: CommandTrie;
     recordingSequence: boolean;
     setRecordingSequence: (value: boolean) => void;
     currentKeySequence: string;
     setCurrentKeySequence: (value: string) => void;
     interceptKeyPress: (event: KeyboardEvent) => void;
+    showPossibleCommands: (prefix: string) => void;
   }
 ) {
   const { key } = event;
   let { currentKeySequence } = context;
-  const { app, recordingSequence, setRecordingSequence, setCurrentKeySequence, interceptKeyPress } =
-    context;
+  const {
+    app,
+    commandTrie,
+    recordingSequence,
+    setRecordingSequence,
+    setCurrentKeySequence,
+    interceptKeyPress,
+    showPossibleCommands,
+  } = context;
 
   // Check if we should start recording a sequence
   if (key === ' ' && !recordingSequence) {
-    log('Space Pressed');
+    log('Space Pressed - Starting WhichKey');
     setRecordingSequence(true);
+    setCurrentKeySequence(' ');
 
-    // Log curated shortcuts
-    for (const shortcutType in whichKeyMappings) {
-      log(shortcutType, whichKeyMappings[shortcutType].name);
-    }
+    // Show root level commands
+    showPossibleCommands('');
 
     interceptKeyPress(event);
     return;
@@ -198,18 +336,30 @@ function updateKeySequence(
 
   interceptKeyPress(event);
 
-  currentKeySequence += key;
+  // If we're already recording, add the new key
+  if (currentKeySequence === ' ') {
+    // First key after space
+    currentKeySequence = key;
+  } else {
+    // Subsequent keys
+    currentKeySequence += key;
+  }
+
   setCurrentKeySequence(currentKeySequence);
 
-  const getCommand = resolveCommandId(currentKeySequence);
-
-  if (getCommand) {
-    if (getCommand.commandId) {
-      app.commands.executeCommandById(getCommand.commandId);
-    }
+  // Show possible completions for the current sequence
+  showPossibleCommands(currentKeySequence);
+  log('command to search', currentKeySequence);
+  // Check if the sequence resolves to a command
+  const command = commandTrie.search(currentKeySequence);
+  log('trie command', command);
+  if (command && command.commandId) {
+    // Execute the command
+    app.commands.executeCommandById(command.commandId);
     setRecordingSequence(false);
     setCurrentKeySequence('');
-  } else if (!Object.keys(whichKeyMappings).some(cmd => cmd.startsWith(currentKeySequence))) {
+  } else if (commandTrie.getPossibleCommands(currentKeySequence).length === 0) {
+    // No possible completions, reset
     setRecordingSequence(false);
     setCurrentKeySequence('');
   }
@@ -245,26 +395,46 @@ class WhichKeyUI {
     document.body.appendChild(this.container);
   }
 
-  show() {
+  showCommands(commands: Array<{ key: string; command: WhichKeyCommand }>, prefix: string) {
+    if (!this.container) {
+      this.createContainer();
+    }
+
+    this.container.style.display = 'block';
+    this.visible = true;
+
     const title = this.container.querySelector('.which-key-pressed');
+    if (title) {
+      title.textContent = `Key sequence: ${prefix || 'Space'}`;
+    }
 
-    const commands = this.container.querySelector('.which-key-commands');
-    if (commands) {
-      commands.innerHTML = '';
+    const commandsEl = this.container.querySelector('.which-key-commands');
+    if (commandsEl) {
+      commandsEl.innerHTML = '';
 
-      for (const shortcutType in whichKeyMappings) {
-        log(shortcutType, whichKeyMappings[shortcutType].name);
-        const command = document.createElement('div');
-        command.addClass('which-key-command');
-        command.innerHTML = `${shortcutType}: ${whichKeyMappings[shortcutType].name}`;
-        commands.appendChild(command);
+      commands.forEach(({ key, command }) => {
+        const cmdEl = document.createElement('div');
+        cmdEl.addClass('which-key-command');
+        cmdEl.innerHTML = `${key}: ${command.name}`;
+        commandsEl.appendChild(cmdEl);
+      });
+
+      // If we're showing root commands and there are none from the trie yet,
+      // fallback to our predefined mappings
+      if (prefix === '' && commands.length === 0) {
+        for (const shortcutType in whichKeyMappings) {
+          const command = document.createElement('div');
+          command.addClass('which-key-command');
+          command.innerHTML = `${shortcutType} ➜ ${whichKeyMappings[shortcutType].name}`;
+          commandsEl.appendChild(command);
+        }
       }
     }
   }
 
   update(key: string) {
     log('update', key);
-    this.show();
+    this.showCommands(this.sharedState.commandTrie.getPossibleCommands(key), key);
   }
 }
 
@@ -277,9 +447,11 @@ class SharedState {
   private currentKeySequence = '';
   private _insertMode = false;
   private ui: WhichKeyUI;
+  commandTrie: CommandTrie;
 
-  constructor(app: App) {
+  constructor(app: App, commandTrie: CommandTrie) {
     this.app = app;
+    this.commandTrie = commandTrie;
   }
 
   setUI(ui: WhichKeyUI) {
@@ -305,6 +477,7 @@ class SharedState {
   handleKeyPress = (event: KeyboardEvent) => {
     const context = {
       app: this.app,
+      commandTrie: this.commandTrie,
       recordingSequence: this.isRecording,
       setRecordingSequence: (value: boolean) => {
         this.isRecording = value;
@@ -312,9 +485,13 @@ class SharedState {
       currentKeySequence: this.currentKeySequence,
       setCurrentKeySequence: (value: string) => {
         this.currentKeySequence = value;
-        this.ui.show();
       },
       interceptKeyPress: this.interceptKeyPress,
+      showPossibleCommands: (prefix: string) => {
+        // Show available commands for the current prefix
+        const commands = this.commandTrie.getPossibleCommands(prefix);
+        this.ui.showCommands(commands, prefix);
+      },
     };
 
     updateKeySequence(event, context);
@@ -365,20 +542,23 @@ export const codeMirrorPlugin = (keyManager: SharedState) => {
 export default class WhichKey extends Plugin {
   settings: MyPluginSettings;
   sharedState: SharedState;
+  commandTrie: CommandTrie;
 
   async onload() {
     log('loading...');
     await this.loadSettings();
 
-    categorizeCommands(this.app);
+    // Create the command trie
+    this.commandTrie = categorizeCommands(this.app);
 
-    // Initialize shared state
-    this.sharedState = new SharedState(this.app);
+    // Initialize shared state with the command trie
+    this.sharedState = new SharedState(this.app, this.commandTrie);
+
+    // Create and set up the UI
+    const ui = new WhichKeyUI(this.app, this.sharedState);
+    this.sharedState.setUI(ui);
+
     this.registerEditorExtension(codeMirrorPlugin(this.sharedState));
-    // this.sharedState.setUI(new WhichKeyUI(this.app, this.sharedState));
-
-    // Temporarily disabled
-    // this.registerDomEvent(document, 'keydown', this.sharedState.handleKeyPress);
 
     // This adds a simple command that can be triggered anywhere
     this.addCommand({
