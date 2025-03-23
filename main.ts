@@ -14,10 +14,6 @@ interface WhichKeyCommand {
   children?: Record<string, WhichKeyCommand>;
 }
 
-interface WhichKeyMappings {
-  [key: string]: WhichKeyCommand;
-}
-
 // Define types for Obsidian commands
 interface ObsidianCommand {
   id: string;
@@ -45,60 +41,6 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
   mySetting: 'default',
 };
 
-const whichKeyMappings: WhichKeyMappings = {
-  ' ': {
-    name: 'Quick switcher: Open quick switcher',
-    commandId: 'switcher:open',
-  },
-  '/': { name: 'Search All Files', commandId: 'global-search:open' },
-  e: { name: 'Toggle left sidebar', commandId: 'app:toggle-left-sidebar' },
-  f: {
-    name: '+Files',
-    children: {
-      d: { name: 'New Directory', commandId: 'file-explorer:new-folder' },
-      n: { name: 'New File', commandId: 'file-explorer:new-file' },
-      m: { name: 'Move File', commandId: 'file-explorer:move-file' },
-      o: { name: 'Open File', commandId: 'file-explorer:open' },
-      r: {
-        name: 'Reveal File',
-        commandId: 'file-explorer:reveal-active-file',
-      },
-    },
-  },
-  s: {
-    name: '+Search',
-    children: {
-      f: { name: 'Search File', commandId: 'editor:open-search' },
-      a: { name: 'Search All Files', commandId: 'global-search:open' },
-    },
-  },
-  w: {
-    name: '+Workspace',
-    children: {
-      n: { name: 'Next Tab', commandId: 'workspace:next-tab' },
-      p: { name: 'Previous Tab', commandId: 'workspace:previous-tab' },
-      s: { name: 'Split Right', commandId: 'workspace:split-vertical' },
-    },
-  },
-  b: {
-    name: '+Bookmarks',
-    children: {
-      o: { name: 'Open Bookmarks', commandId: 'bookmarks:open' },
-      a: {
-        name: 'Bookmark All Tabs',
-        commandId: 'bookmarks:bookmark-all-tabs',
-      },
-    },
-  },
-  g: {
-    name: '+Graph',
-    children: {
-      o: { name: 'Open Graph', commandId: 'graph:open' },
-      a: { name: 'Animate Graph', commandId: 'graph:animate' },
-    },
-  },
-};
-
 class TrieNode {
   children: Map<string, TrieNode>;
   name?: string;
@@ -118,6 +60,7 @@ class CommandTrie {
     this.root = new TrieNode();
   }
 
+  // Currently only used for category insertion
   insert(sequence: string, command: WhichKeyCommand) {
     let current = this.root;
 
@@ -139,6 +82,7 @@ class CommandTrie {
     current.isEndOfCommand = true;
   }
 
+  // Used directly before execution
   search(sequence: string): WhichKeyCommand | null {
     log('in search:', sequence);
     let current = this.root;
@@ -165,7 +109,7 @@ class CommandTrie {
   getPossibleCommands(prefix: string): Array<{ key: string; command: WhichKeyCommand }> {
     let current = this.root;
 
-    // If prefix is activation, don't walk
+    // If prefix is activation, no need to walk
     if (prefix !== ' ') {
       // Walk down to prefix node
       for (const key of prefix) {
@@ -198,7 +142,8 @@ class CommandTrie {
     return possibilities;
   }
 
-  insertCommands(category: string, commands: Array<Record<string, ObsidianCommand>>) {
+  // Inserts nested commands into the trie under each category
+  insertCommands(category: string, commands) {
     // Get first letter of each word as prefix options
     const categoryPrefixOptions = category.split('-').map(word => word[0].toLowerCase());
     log(categoryPrefixOptions);
@@ -211,6 +156,7 @@ class CommandTrie {
         commandId: undefined,
       });
     }
+    // TODO: Defaulting behavior for categories
     // else if (categoryNode && this.root.children.get(categoryPrefixOptions[1])) {
 
     // Insert commands into the category node
@@ -218,7 +164,6 @@ class CommandTrie {
       log('insert command:', abvCommandName, command);
       const sequenceOptions = abvCommandName.split('-').map(word => word[0].toLowerCase());
       log('sequence options:', sequenceOptions);
-      // let current = this.root;
       let current = this.root.children.get(categoryPrefixOptions[0]);
 
       // Only insert as many keys as needed
@@ -226,6 +171,7 @@ class CommandTrie {
       if (!current?.children.has(sequenceOptions[0])) {
         current?.children.set(sequenceOptions[0], new TrieNode());
       }
+      // TODO: Defaulting behavior for nested commands
       // If the node already exists for this prefix, exit the loop
       else if (sequenceOptions[1] && current.children.has(sequenceOptions[1])) {
         return;
@@ -236,50 +182,15 @@ class CommandTrie {
       } else {
         return;
       }
+
       current.name = command.name;
       current.commandId = command.commandId;
       current.isEndOfCommand = true;
     });
   }
-
-  // Add method to handle nested commands
-  insertNestedCommand(prefix: string, command: ObsidianCommand) {
-    // Get category from command ID
-    const [category, commandName] = command.id.split(':');
-
-    try {
-      // First, organize commands by category
-      // TODO: To uppercase and handle shift
-      const categoryPrefix = category[0].toLowerCase();
-
-      // Ensure the category node exists and has metadata
-      const categoryNodeExists = this.root.children.get(categoryPrefix);
-      // Create a new category node if it doesn't exist
-      if (!categoryNodeExists) {
-        this.insert(categoryPrefix, {
-          name: `+${category}`, // Use + prefix for categories
-          commandId: undefined, // Categories don't have commands
-        });
-      }
-
-      // For the action, just take the first letter of the first word
-      // TODO: Construct possible prefixes to send
-      const firstWord = command.name.split(/\s+/)[0];
-      const commandPrefix = firstWord ? firstWord[0].toLowerCase() : '';
-
-      if (categoryPrefix && commandPrefix) {
-        // Create a two-level sequence
-        this.insert(`${categoryPrefix}${commandPrefix}`, {
-          name: command.name,
-          commandId: command.id,
-        });
-      }
-    } catch (err) {
-      log('Error processing command', command.id, err);
-    }
-  }
 }
 
+// Categorize commands and insert them into the trie
 function categorizeCommands(app: App) {
   const { commands } = app.commands;
   const commandTrie = new CommandTrie();
@@ -305,35 +216,15 @@ function categorizeCommands(app: App) {
     };
   });
 
-  // Sort categories based on command number
-  // We don't want to use the key from any of these
+  // Sort categories based on number of commands
   const sortedCommands = Object.entries(categorizedCommands).sort(
     ([, a], [, b]) => Object.keys(b).length - Object.keys(a).length
   );
-  log('sorted commands', sortedCommands);
 
   sortedCommands.forEach(([category, relevantCommands]) => {
     commandTrie.insertCommands(category, relevantCommands);
   });
 
-  // TODO: Add categorized commands to trie
-  // Object.entries(commands).forEach(([id, command]) => {
-  //   try {
-  //     // Insert the command into the trie
-  //     commandTrie.insertNestedCommand(id, {
-  //       id: command.id,
-  //       name: command.name,
-  //       icon: command.icon,
-  //       hotkeys: command.hotkeys,
-  //       // TODO: Probably don't need this
-  //       callback: command.callback || command.editorCallback || command.checkCallback,
-  //     });
-  //   } catch (err) {
-  //     log('Error categorizing command', id, err);
-  //   }
-  // });
-
-  // log('Command Trie built successfully');
   log(commandTrie);
   return commandTrie;
 }
@@ -396,10 +287,9 @@ function updateKeySequence(
 
   // Show possible completions for the current sequence
   showPossibleCommands(currentKeySequence);
-  log('command to search', currentKeySequence);
+
   // Check if the sequence resolves to a command
   const command = commandTrie.search(currentKeySequence);
-  log('trie command', command);
   if (command && command.commandId) {
     // Execute the command
     app.commands.executeCommandById(command.commandId);
@@ -465,17 +355,6 @@ class WhichKeyUI {
         cmdEl.innerHTML = `${key}: ${command.name}`;
         commandsEl.appendChild(cmdEl);
       });
-
-      // If we're showing root commands and there are none from the trie yet,
-      // fallback to our predefined mappings
-      if (prefix === '' && commands.length === 0) {
-        for (const key in commands) {
-          const command = document.createElement('div');
-          command.addClass('which-key-command');
-          command.innerHTML = `${key} ➜ ${whichKeyMappings[key].name}`;
-          commandsEl.appendChild(command);
-        }
-      }
     }
   }
 
