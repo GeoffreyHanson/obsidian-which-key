@@ -84,7 +84,6 @@ class CommandTrie {
 
   // Used directly before execution
   search(sequence: string): WhichKeyCommand | null {
-    log('in search:', sequence);
     let current = this.root;
 
     for (const key of sequence) {
@@ -97,11 +96,9 @@ class CommandTrie {
       }
       current = next;
     }
-    log('current', current);
     const result = current.isEndOfCommand
       ? { name: current.name || '', commandId: current.commandId }
       : null;
-    log('search result', result);
     return result;
   }
 
@@ -127,7 +124,6 @@ class CommandTrie {
     const possibilities: Array<{ key: string; command: WhichKeyCommand }> = [];
     // Loop across children
     current.children.forEach((node, key) => {
-      log('node:', node, 'key:', key);
       if (node.name) {
         possibilities.push({
           key,
@@ -145,8 +141,7 @@ class CommandTrie {
   // Inserts nested commands into the trie under each category
   insertCommands(category: string, commands) {
     // Get first letter of each word as prefix options
-    const categoryPrefixOptions = category.split('-').map(word => word[0].toLowerCase());
-    log(categoryPrefixOptions);
+    const categoryPrefixOptions = category.split('-').map(word => word[0].toUpperCase());
 
     // Check if the prefix exists
     const categoryNode = this.root.children.get(categoryPrefixOptions[0]);
@@ -161,9 +156,7 @@ class CommandTrie {
 
     // Insert commands into the category node
     Object.entries(commands).forEach(([abvCommandName, command]) => {
-      log('insert command:', abvCommandName, command);
       const sequenceOptions = abvCommandName.split('-').map(word => word[0].toLowerCase());
-      log('sequence options:', sequenceOptions);
       let current = this.root.children.get(categoryPrefixOptions[0]);
 
       // Only insert as many keys as needed
@@ -188,6 +181,11 @@ class CommandTrie {
       current.isEndOfCommand = true;
     });
   }
+}
+
+function interceptKeyPress(event: KeyboardEvent) {
+  event.preventDefault();
+  event.stopPropagation();
 }
 
 // Categorize commands and insert them into the trie
@@ -259,30 +257,24 @@ function updateKeySequence(
 
   // Check if we should start recording a sequence
   if (key === ' ' && !recordingSequence) {
-    log('Space Pressed - Starting WhichKey');
+    log('Space pressed, start recording');
     setRecordingSequence(true);
     setCurrentKeySequence(' ');
 
     // Show root level commands
+    // TODO: Remove this abstraction
     showPossibleCommands('');
 
     interceptKeyPress(event);
     return;
   }
 
+  // If the key pressed isn't space not recording, exit & intercept press
   if (!recordingSequence) return;
-
   interceptKeyPress(event);
 
-  // If we're already recording, add the new key
-  if (currentKeySequence === ' ') {
-    // First key after space
-    currentKeySequence = key;
-  } else {
-    // Subsequent keys
-    currentKeySequence += key;
-  }
-
+  // If recording, add the new key & update state
+  currentKeySequence = currentKeySequence === ' ' ? key : currentKeySequence + key;
   setCurrentKeySequence(currentKeySequence);
 
   // Show possible completions for the current sequence
@@ -352,7 +344,7 @@ class WhichKeyUI {
       commands.forEach(({ key, command }) => {
         const cmdEl = document.createElement('div');
         cmdEl.addClass('which-key-command');
-        cmdEl.innerHTML = `${key}: ${command.name}`;
+        cmdEl.innerHTML = `${key}: ${prefix ? '' : '+'}${command.name}`;
         commandsEl.appendChild(cmdEl);
       });
     }
@@ -397,10 +389,9 @@ class SharedState {
     event.stopPropagation();
   };
 
-  // Only handle key presses when in not in insert mode or when the editor is not focused
-  // insert mode handled by the CodeMirrorPlugin
   // This should handle the editor not being focused
   handleKeyPress = (event: KeyboardEvent) => {
+    // TODO: Trim context, most of this should be state
     const context = {
       app: this.app,
       commandTrie: this.commandTrie,
@@ -414,10 +405,7 @@ class SharedState {
       },
       interceptKeyPress: this.interceptKeyPress,
       showPossibleCommands: (prefix: string) => {
-        // Show available commands for the current prefix
-        log('showPossibleCommands prefix:', prefix);
         const commands = this.commandTrie.getPossibleCommands(prefix);
-        log('showPossibleCommands commands:', commands);
         this.ui.showCommands(commands, prefix);
       },
     };
@@ -440,11 +428,17 @@ class WhichKeyEditorPlugin implements PluginValue {
   // Event listener for vim mode
   constructor(view: EditorView) {
     this.view = view;
-    view.dom.addEventListener('keydown', this.handleEditorKeyPress, true);
+    view.dom.addEventListener('keydown', this.handleVimKeyPress, true);
   }
 
-  handleEditorKeyPress = (event: KeyboardEvent) => {
-    // Only handle key presses when not in insert mode
+  // Only handle key presses when not in insert mode
+  handleVimKeyPress = (event: KeyboardEvent) => {
+    const { key } = event;
+    // Ignore shift to allow capital letters for command categories
+    // TODO: Ignore esc, backspace, etc.
+    if (key === 'Shift') {
+      return;
+    }
     if (!WhichKeyEditorPlugin.sharedState.insertMode) {
       WhichKeyEditorPlugin.sharedState.handleKeyPress(event);
     }
@@ -454,11 +448,10 @@ class WhichKeyEditorPlugin implements PluginValue {
     // @ts-expect-error, not typed
     const insertMode = update?.view?.cm?.state?.vim?.insertMode;
     WhichKeyEditorPlugin.sharedState.insertMode = insertMode;
-    log('CM insertMode', insertMode);
   }
 
   destroy() {
-    this.view.dom.removeEventListener('keydown', this.handleEditorKeyPress, true);
+    this.view.dom.removeEventListener('keydown', this.handleVimKeyPress, true);
   }
 }
 
