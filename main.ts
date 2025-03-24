@@ -60,28 +60,6 @@ class CommandTrie {
     this.root = new TrieNode();
   }
 
-  // Currently only used for category insertion
-  insert(sequence: string, command: WhichKeyCommand) {
-    let current = this.root;
-
-    for (const key of sequence) {
-      if (!current.children.has(key)) {
-        current.children.set(key, new TrieNode());
-      }
-      const next = current.children.get(key);
-      if (next) {
-        current = next;
-      } else {
-        // Handle the unlikely case where the node doesn't exist
-        return;
-      }
-    }
-
-    current.name = command.name;
-    current.commandId = command.commandId;
-    current.isEndOfCommand = true;
-  }
-
   // Used directly before execution
   search(sequence: string): WhichKeyCommand | null {
     let current = this.root;
@@ -140,52 +118,68 @@ class CommandTrie {
 
   // Inserts nested commands into the trie under each category
   insertCommands(category: string, commands) {
+    log('insertCommands', category, commands);
     // Get first letter of each word as prefix options
     const categoryPrefixOptions = category.split('-').map(word => word[0].toUpperCase());
 
-    // Check if the prefix exists
-    const categoryNode = this.root.children.get(categoryPrefixOptions[0]);
-    if (!categoryNode) {
-      this.insert(categoryPrefixOptions[0], {
-        name: category,
-        commandId: undefined,
-      });
+    let current = this.root;
+    let categoryNode = null;
+    let foundCategory = false;
+
+    for (const prefix of categoryPrefixOptions) {
+      if (!current.children.has(prefix)) {
+        current.children.set(prefix, new TrieNode());
+        categoryNode = current.children.get(prefix);
+
+        categoryNode.name = category;
+        categoryNode.commandId = undefined;
+        categoryNode.isEndOfCommand = false;
+
+        foundCategory = true;
+        break;
+      }
     }
-    // TODO: Defaulting behavior for categories
-    // else if (categoryNode && this.root.children.get(categoryPrefixOptions[1])) {
+
+    if (!foundCategory) {
+      log(`Category skipped - no available prefix: ${category}`);
+      return;
+    }
 
     // Insert commands into the category node
     Object.entries(commands).forEach(([abvCommandName, command]) => {
       const sequenceOptions = abvCommandName.split('-').map(word => word[0].toLowerCase());
-      let current = this.root.children.get(categoryPrefixOptions[0]);
+      let current = categoryNode;
 
-      // Only insert as many keys as needed
-      // If the prefix doesn't exist, create it
-      if (!current?.children.has(sequenceOptions[0])) {
-        current?.children.set(sequenceOptions[0], new TrieNode());
-      }
-      // TODO: Defaulting behavior for nested commands
-      // If the node already exists for this prefix, exit the loop
-      else if (sequenceOptions[1] && current.children.has(sequenceOptions[1])) {
-        return;
-      }
-      const next = current?.children.get(sequenceOptions[0]);
-      if (next) {
-        current = next;
-      } else {
-        return;
+      if (!current) {
+        log(`Command skipped - category node missing: ${category}:${abvCommandName}`);
+        return; // Skip if category node doesn't exist
       }
 
+      // Find the first available sequence option
+      let foundCommandSlot = false;
+
+      for (const prefix of sequenceOptions) {
+        // Check if this slot is available
+        if (!current.children.has(prefix)) {
+          // Found an open slot, create the node
+          current.children.set(prefix, new TrieNode());
+          current = current.children.get(prefix);
+          foundCommandSlot = true;
+          break; // Exit loop after finding the first available slot
+        }
+      }
+
+      if (!foundCommandSlot) {
+        log(`Command skipped - no available prefix: ${category}:${abvCommandName}`);
+        return;
+      }
+
+      // Now set the command properties on the current node
       current.name = command.name;
       current.commandId = command.commandId;
       current.isEndOfCommand = true;
     });
   }
-}
-
-function interceptKeyPress(event: KeyboardEvent) {
-  event.preventDefault();
-  event.stopPropagation();
 }
 
 // Categorize commands and insert them into the trie
@@ -219,6 +213,7 @@ function categorizeCommands(app: App) {
     ([, a], [, b]) => Object.keys(b).length - Object.keys(a).length
   );
 
+  // Insert commands into the trie
   sortedCommands.forEach(([category, relevantCommands]) => {
     commandTrie.insertCommands(category, relevantCommands);
   });
