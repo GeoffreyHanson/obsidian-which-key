@@ -119,9 +119,16 @@ class CommandTrie {
 
   // Inserts nested commands into the trie under each category
   insertCommands(category: string, commands: Record<string, CategorizedCommand>) {
-    log('insertCommands', category, commands);
     // Get first letter of each word as prefix options
-    const categoryPrefixOptions = category.split('-').map(word => word[0].toUpperCase());
+    const primaryCategoryOptions = category
+      .split('-')
+      .map(word => [word[0].toLowerCase(), word[0].toUpperCase()])
+      .flat();
+
+    // Letters of the first word except for the first
+    const secondaryCategoryOptions = category.split('-')[0].split('').slice(1);
+
+    const categoryPrefixOptions = [...primaryCategoryOptions, ...secondaryCategoryOptions];
 
     const current = this.root;
     let categoryNode = null;
@@ -148,7 +155,16 @@ class CommandTrie {
 
     // Insert commands into the category node
     Object.entries(commands).forEach(([abvCommandName, command]) => {
-      const sequenceOptions = command.name.split(' ').map(word => word[0].toLowerCase());
+      // const sequenceOptions = command.name.split(' ').map(word => word[0].toLowerCase());
+      const primaryPrefixOptions = command.name
+        .split(' ')
+        .map(word => [word[0].toLowerCase(), word[0].toUpperCase()])
+        .flat();
+
+      const secondaryPrefixOption = command.name.split(' ')[0].split('').slice(1);
+
+      const sequenceOptions = [...primaryPrefixOptions, ...secondaryPrefixOption];
+
       let current = categoryNode;
 
       if (!current) {
@@ -212,14 +228,13 @@ function categorizeCommands(app: App) {
   const sortedCommands = Object.entries(categorizedCommands).sort(
     ([, a], [, b]) => Object.keys(b).length - Object.keys(a).length
   );
-  log('sortedCommands', sortedCommands);
+  // log('sortedCommands', sortedCommands);
 
   // Insert commands into the trie
   sortedCommands.forEach(([category, relevantCommands]) => {
     commandTrie.insertCommands(category, relevantCommands);
   });
 
-  log(commandTrie);
   return commandTrie;
 }
 
@@ -465,6 +480,7 @@ export default class WhichKey extends Plugin {
     log('loading...');
     await this.loadSettings();
 
+    log(this.app);
     // Create the command trie
     this.commandTrie = categorizeCommands(this.app);
 
