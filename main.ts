@@ -148,7 +148,7 @@ class CommandTrie {
 
     // Insert commands into the category node
     Object.entries(commands).forEach(([abvCommandName, command]) => {
-      const sequenceOptions = abvCommandName.split('-').map(word => word[0].toLowerCase());
+      const sequenceOptions = command.name.split(' ').map(word => word[0].toLowerCase());
       let current = categoryNode;
 
       if (!current) {
@@ -212,6 +212,7 @@ function categorizeCommands(app: App) {
   const sortedCommands = Object.entries(categorizedCommands).sort(
     ([, a], [, b]) => Object.keys(b).length - Object.keys(a).length
   );
+  log('sortedCommands', sortedCommands);
 
   // Insert commands into the trie
   sortedCommands.forEach(([category, relevantCommands]) => {
