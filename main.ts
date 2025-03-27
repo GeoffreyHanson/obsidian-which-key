@@ -30,6 +30,18 @@ interface ObsidianCommands {
   executeCommandById(id: string): boolean;
 }
 
+interface CategorizedCommand {
+  name: string;
+  commandId: string;
+  icon: string;
+  hotkeys: string[];
+  callback?: any;
+}
+
+interface CategorizedCommands {
+  [category: string]: Record<string, CategorizedCommand>;
+}
+
 // Extend the App interface to include commands
 declare module 'obsidian' {
   interface App {
@@ -42,13 +54,13 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
 };
 
 class TrieNode {
-  children: Map<string, TrieNode>;
+  children: Record<string, TrieNode>;
   name?: string;
   commandId?: string;
   isEndOfCommand: boolean;
 
   constructor() {
-    this.children = new Map();
+    this.children = {};
     this.isEndOfCommand = false;
   }
 }
@@ -60,27 +72,20 @@ class CommandTrie {
     this.root = new TrieNode();
   }
 
-  // Used directly before execution
-  search(sequence: string): WhichKeyCommand | null {
+  /** Get command id for a prefix */
+  getCommandId(prefix: string) {
     let current = this.root;
 
-    for (const key of sequence) {
-      if (!current.children.has(key)) {
+    for (const key of prefix) {
+      if (!(key in current.children)) {
         return null;
       }
-      const next = current.children.get(key);
-      if (!next) {
-        return null;
-      }
-      current = next;
+      current = current.children[key];
     }
-    const result = current.isEndOfCommand
-      ? { name: current.name || '', commandId: current.commandId }
-      : null;
-    return result;
+    return current.commandId;
   }
 
-  // Get all possible completions for a prefix
+  /** Get all possible completions for a prefix */
   getPossibleCommands(prefix: string): Array<{ key: string; command: WhichKeyCommand }> {
     let current = this.root;
 
@@ -88,20 +93,16 @@ class CommandTrie {
     if (prefix !== ' ') {
       // Walk down to prefix node
       for (const key of prefix) {
-        if (!current.children.has(key)) {
+        if (!(key in current.children)) {
           return [];
         }
-        const next = current.children.get(key);
-        if (!next) {
-          return [];
-        }
-        current = next;
+        current = current.children[key];
       }
     }
 
     const possibilities: Array<{ key: string; command: WhichKeyCommand }> = [];
-    // Loop across children
-    current.children.forEach((node, key) => {
+
+    Object.entries(current.children).forEach(([key, node]) => {
       if (node.name) {
         possibilities.push({
           key,
@@ -117,19 +118,19 @@ class CommandTrie {
   }
 
   // Inserts nested commands into the trie under each category
-  insertCommands(category: string, commands) {
+  insertCommands(category: string, commands: Record<string, CategorizedCommand>) {
     log('insertCommands', category, commands);
     // Get first letter of each word as prefix options
     const categoryPrefixOptions = category.split('-').map(word => word[0].toUpperCase());
 
-    let current = this.root;
+    const current = this.root;
     let categoryNode = null;
     let foundCategory = false;
 
     for (const prefix of categoryPrefixOptions) {
-      if (!current.children.has(prefix)) {
-        current.children.set(prefix, new TrieNode());
-        categoryNode = current.children.get(prefix);
+      if (!(prefix in current.children)) {
+        current.children[prefix] = new TrieNode();
+        categoryNode = current.children[prefix];
 
         categoryNode.name = category;
         categoryNode.commandId = undefined;
@@ -160,10 +161,10 @@ class CommandTrie {
 
       for (const prefix of sequenceOptions) {
         // Check if this slot is available
-        if (!current.children.has(prefix)) {
+        if (!(prefix in current.children)) {
           // Found an open slot, create the node
-          current.children.set(prefix, new TrieNode());
-          current = current.children.get(prefix);
+          current.children[prefix] = new TrieNode();
+          current = current.children[prefix];
           foundCommandSlot = true;
           break; // Exit loop after finding the first available slot
         }
@@ -188,10 +189,9 @@ function categorizeCommands(app: App) {
   const commandTrie = new CommandTrie();
   log('all commands:', commands);
 
-  const categorizedCommands = {};
+  const categorizedCommands: CategorizedCommands = {};
 
-  Object.entries(commands).forEach(entry => {
-    const [id, command] = entry;
+  Object.entries(commands).forEach(([id, command]: [string, ObsidianCommand]) => {
     const [category, subCommand] = id.split(':');
 
     // If the category doesn't exist, create it
@@ -276,10 +276,10 @@ function updateKeySequence(
   showPossibleCommands(currentKeySequence);
 
   // Check if the sequence resolves to a command
-  const command = commandTrie.search(currentKeySequence);
-  if (command && command.commandId) {
-    // Execute the command
-    app.commands.executeCommandById(command.commandId);
+  const commandId = commandTrie.getCommandId(currentKeySequence);
+
+  if (commandId) {
+    app.commands.executeCommandById(commandId);
     setRecordingSequence(false);
     setCurrentKeySequence('');
   } else if (commandTrie.getPossibleCommands(currentKeySequence).length === 0) {
