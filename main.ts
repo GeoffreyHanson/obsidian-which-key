@@ -212,12 +212,11 @@ class CommandTrie {
     }
 
     current.name = name;
-    current.commandId = id;
-    current.isEndOfCommand = true;
+    current.commandId = id || undefined;
+    current.isEndOfCommand = !!id;
   }
 }
 
-// BUGFIX: Some prefixes are being popped before assignment when they're the only option for some commands
 // TODO: Prioritize numbers, filter out and, to, in, etc
 function determinePrefixes(parentPrefix, commands) {
   // Get counts for all commands in the bucket
@@ -226,7 +225,7 @@ function determinePrefixes(parentPrefix, commands) {
   const possiblePrefixes = commands.map(command => {
     const { id } = command;
 
-    // Split on : or -
+    // Split on : or - and grab the first letter of each word
     const firstLetters = id.split(/[:-]/g).map(letter => letter[0]);
 
     // Update counts
@@ -300,29 +299,47 @@ function curateCommands(app: App) {
     {
       prefix: 's',
       name: 'Search',
+      id: undefined,
       commands: id => id.includes('search') && !id.includes('bookmarks'),
     },
-    { prefix: 'f', name: 'File', commands: id => id.includes('file') && !id.includes('canvas') },
-    { prefix: 'b', name: 'Backlink search', commands: id => id.includes('backlink') },
-    { prefix: 'B', name: 'Bookmarks', commands: id => id.includes('bookmarks') },
+    {
+      prefix: 'f',
+      name: 'File',
+      id: undefined,
+      commands: id => id.includes('file') && !id.includes('canvas'),
+    },
+    {
+      prefix: 'b',
+      name: 'Backlink search',
+      id: undefined,
+      commands: id => id.includes('backlink'),
+    },
+    { prefix: 'B', name: 'Bookmarks', id: undefined, commands: id => id.includes('bookmarks') },
     {
       prefix: 'Tab',
       name: 'Tab navigation',
+      id: undefined,
       commands: id =>
         id.includes('tab') &&
         !(id.includes('table') || id.includes('bookmarks') || id.includes('file-explorer')),
     },
-    { prefix: 'v', name: 'Vault', commands: id => id.includes('vault') },
-    { prefix: 't', name: 'Text', commands: id => id.includes('toggle') && id.includes('editor') },
-    { prefix: 'T', name: 'Table', commands: id => id.includes('table') },
+    { prefix: 'v', name: 'Vault', id: undefined, commands: id => id.includes('vault') },
+    {
+      prefix: 't',
+      name: 'Text',
+      id: undefined,
+      commands: id => id.includes('toggle') && id.includes('editor'),
+    },
+    { prefix: 'T', name: 'Table', id: undefined, commands: id => id.includes('table') },
     {
       prefix: 'n',
       name: 'Navigate',
+      id: undefined,
       commands: id => id === 'app:go-back' || id === 'app:go-forward',
     },
-    { prefix: 'm', name: 'Markdown', commands: id => id.includes('markdown') },
-    { prefix: 'w', name: 'Windows', commands: id => id.includes('window') },
-    { prefix: 'c', name: 'Canvas', commands: id => id.includes('canvas') },
+    { prefix: 'm', name: 'Markdown', id: undefined, commands: id => id.includes('markdown') },
+    { prefix: 'w', name: 'Windows', id: undefined, commands: id => id.includes('window') },
+    { prefix: 'c', name: 'Canvas', id: undefined, commands: id => id.includes('canvas') },
   ];
 
   // const suggestedMappings = [
