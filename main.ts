@@ -436,103 +436,16 @@ function categorizeCommands(app: App) {
   // return commandTrie;
 }
 
-/**
- * Shared key handler function to process key events for both editor and global contexts
- */
-function updateKeySequence(
-  event: KeyboardEvent,
-  context: {
-    app: App;
-    commandTrie: CommandTrie;
-    recordingSequence: boolean;
-    setRecordingSequence: (value: boolean) => void;
-    currentKeySequence: string;
-    setCurrentKeySequence: (value: string) => void;
-    interceptKeyPress: (event: KeyboardEvent) => void;
-    showPossibleCommands: (prefix: string) => void;
-  }
-) {
-  const { key } = event;
-  let { currentKeySequence } = context;
-  const {
-    app,
-    commandTrie,
-    recordingSequence,
-    setRecordingSequence,
-    setCurrentKeySequence,
-    interceptKeyPress,
-    showPossibleCommands,
-  } = context;
-
-  // Check if we should start recording a sequence
-  if (key === ' ' && !recordingSequence) {
-    log('Space pressed, start recording');
-    setRecordingSequence(true);
-    setCurrentKeySequence(' ');
-
-    // Show root level commands
-    // TODO: Remove this abstraction
-    showPossibleCommands('');
-
-    interceptKeyPress(event);
-    return;
-  }
-
-  // If the key pressed isn't space not recording, exit & intercept press
-  if (!recordingSequence) return;
-  interceptKeyPress(event);
-
-  // If recording, add the new key & update state
-  currentKeySequence = currentKeySequence === ' ' ? key : currentKeySequence + key;
-  setCurrentKeySequence(currentKeySequence);
-
-  // Show possible completions for the current sequence
-  showPossibleCommands(currentKeySequence);
-
-  // Check if the sequence resolves to a command
-  const commandId = commandTrie.getCommandId(currentKeySequence);
-
-  if (commandId) {
-    app.commands.executeCommandById(commandId);
-    setRecordingSequence(false);
-    setCurrentKeySequence('');
-  } else if (commandTrie.getPossibleCommands(currentKeySequence).length === 0) {
-    // No possible completions, reset
-    setRecordingSequence(false);
-    setCurrentKeySequence('');
-  }
-}
-
 class WhichKeyUI {
   private app: App;
   private container: HTMLElement;
   private visible = false;
-  private sharedState: SharedState;
 
-  constructor(app: App, sharedState: SharedState) {
+  constructor(app: App) {
     this.app = app;
-    this.sharedState = sharedState;
-    // this.createContainer();
   }
 
-  private createContainer() {
-    this.container = document.createElement('div');
-    this.container.addClass('which-key-container');
-
-    // Container Title
-    const keyPressed = document.createElement('div');
-    keyPressed.addClass('which-key-pressed');
-    this.container.appendChild(keyPressed);
-
-    // Possible Commands
-    const possibleCommands = document.createElement('div');
-    possibleCommands.addClass('which-key-commands');
-    this.container.appendChild(possibleCommands);
-
-    // Add container to the DOM
-    document.body.appendChild(this.container);
-  }
-
+  // UI methods focus purely on display
   showCommands(commands: Array<{ key: string; command: WhichKeyCommand }>, prefix: string) {
     if (!this.container) {
       this.createContainer();
@@ -549,7 +462,6 @@ class WhichKeyUI {
     const commandsEl = this.container.querySelector('.which-key-commands');
     if (commandsEl) {
       commandsEl.innerHTML = '';
-
       commands.forEach(({ key, command }) => {
         const cmdEl = document.createElement('div');
         cmdEl.addClass('which-key-command');
@@ -559,10 +471,20 @@ class WhichKeyUI {
     }
   }
 
-  // update(key: string) {
-  //   log('update', key);
-  //   this.showCommands(this.sharedState.commandTrie.getPossibleCommands(key), key);
-  // }
+  private createContainer() {
+    this.container = document.createElement('div');
+    this.container.addClass('which-key-container');
+
+    const keyPressed = document.createElement('div');
+    keyPressed.addClass('which-key-pressed');
+    this.container.appendChild(keyPressed);
+
+    const possibleCommands = document.createElement('div');
+    possibleCommands.addClass('which-key-commands');
+    this.container.appendChild(possibleCommands);
+
+    document.body.appendChild(this.container);
+  }
 }
 
 /**
@@ -576,12 +498,9 @@ class SharedState {
   private ui: WhichKeyUI;
   commandTrie: CommandTrie;
 
-  constructor(app: App, commandTrie: CommandTrie) {
+  constructor(app: App, commandTrie: CommandTrie, ui: WhichKeyUI) {
     this.app = app;
     this.commandTrie = commandTrie;
-  }
-
-  setUI(ui: WhichKeyUI) {
     this.ui = ui;
   }
 
@@ -598,29 +517,49 @@ class SharedState {
     event.stopPropagation();
   };
 
-  // This should handle the editor not being focused
-  handleKeyPress = (event: KeyboardEvent) => {
-    // TODO: Trim context, most of this should be state
-    const context = {
-      app: this.app,
-      commandTrie: this.commandTrie,
-      recordingSequence: this.isRecording,
-      setRecordingSequence: (value: boolean) => {
-        this.isRecording = value;
-      },
-      currentKeySequence: this.currentKeySequence,
-      setCurrentKeySequence: (value: string) => {
-        this.currentKeySequence = value;
-      },
-      interceptKeyPress: this.interceptKeyPress,
-      showPossibleCommands: (prefix: string) => {
-        const commands = this.commandTrie.getPossibleCommands(prefix);
-        this.ui.showCommands(commands, prefix);
-      },
-    };
+  // TODO: UI should be updated in editor plugin
+  updateKeySequence(event: KeyboardEvent) {
+    const { key } = event;
 
-    updateKeySequence(event, context);
-  };
+    if (key === ' ' && !this.isRecording) {
+      this.isRecording = true;
+      this.currentKeySequence = ' ';
+
+      // Get commands and tell UI to display them
+      const commands = this.commandTrie.getPossibleCommands('');
+      this.ui.showCommands(commands, '');
+
+      this.interceptKeyPress(event);
+      return;
+    }
+
+    // If not recording and key isn't space, exit
+    if (!this.isRecording) return;
+    this.interceptKeyPress(event);
+
+    // Update the sequence
+    this.currentKeySequence = this.currentKeySequence === ' ' ? key : this.currentKeySequence + key;
+
+    // Show possible completions
+    const commands = this.commandTrie.getPossibleCommands(this.currentKeySequence);
+    this.ui.showCommands(commands, this.currentKeySequence);
+
+    // Check if sequence resolves to a command
+    const commandId = this.commandTrie.getCommandId(this.currentKeySequence);
+
+    if (commandId) {
+      this.app.commands.executeCommandById(commandId);
+      this.resetState();
+    } else if (commands.length === 0) {
+      // No possible completions, reset
+      this.resetState();
+    }
+  }
+
+  private resetState() {
+    this.isRecording = false;
+    this.currentKeySequence = '';
+  }
 }
 
 /**
@@ -650,7 +589,7 @@ class WhichKeyEditorPlugin implements PluginValue {
       return;
     }
     if (!WhichKeyEditorPlugin.sharedState.insertMode) {
-      WhichKeyEditorPlugin.sharedState.handleKeyPress(event);
+      WhichKeyEditorPlugin.sharedState.updateKeySequence(event);
     }
   };
 
@@ -686,11 +625,8 @@ export default class WhichKey extends Plugin {
     // this.commandTrie = categorizeCommands(this.app);
 
     // Initialize shared state with the command trie
-    this.sharedState = new SharedState(this.app, this.commandTrie);
-
-    // Create and set up the UI
-    const ui = new WhichKeyUI(this.app, this.sharedState);
-    this.sharedState.setUI(ui);
+    const ui = new WhichKeyUI(this.app);
+    this.sharedState = new SharedState(this.app, this.commandTrie, ui);
 
     this.registerEditorExtension(codeMirrorPlugin(this.sharedState));
 
