@@ -264,32 +264,32 @@ function curateCommands(app: App) {
 
   const topLevelMappings = [
     {
-      prefix: ' ',
+      prefix: [' '],
       name: 'Open Quick Switcher',
       id: 'switcher:open',
     },
     {
-      prefix: '/',
+      prefix: ['/'],
       name: 'Open Global Search',
       id: 'global-search:open',
     },
     {
-      prefix: 'e',
+      prefix: ['e'],
       name: 'Toggle left sidebar',
       id: 'app:toggle-left-sidebar',
     },
     {
-      prefix: 'p',
+      prefix: ['p'],
       name: 'Open command palette',
       id: 'command-palette:open',
     },
     {
-      prefix: '|',
+      prefix: ['|'],
       name: 'Split right',
       id: 'workspace:split-vertical',
     },
     {
-      prefix: '-',
+      prefix: ['-'],
       name: 'Split down',
       id: 'workspace:split-horizontal',
     },
@@ -297,49 +297,49 @@ function curateCommands(app: App) {
 
   const intentMappings = [
     {
-      prefix: 's',
+      prefix: ['s'],
       name: 'Search',
       id: undefined,
       commands: id => id.includes('search') && !id.includes('bookmarks'),
     },
     {
-      prefix: 'f',
+      prefix: ['f'],
       name: 'File',
       id: undefined,
       commands: id => id.includes('file') && !id.includes('canvas'),
     },
     {
-      prefix: 'b',
+      prefix: ['b'],
       name: 'Backlink search',
       id: undefined,
       commands: id => id.includes('backlink'),
     },
-    { prefix: 'B', name: 'Bookmarks', id: undefined, commands: id => id.includes('bookmarks') },
+    { prefix: ['B'], name: 'Bookmarks', id: undefined, commands: id => id.includes('bookmarks') },
     {
-      prefix: 'Tab',
+      prefix: ['Tab'],
       name: 'Tab navigation',
       id: undefined,
       commands: id =>
         id.includes('tab') &&
         !(id.includes('table') || id.includes('bookmarks') || id.includes('file-explorer')),
     },
-    { prefix: 'v', name: 'Vault', id: undefined, commands: id => id.includes('vault') },
+    { prefix: ['v'], name: 'Vault', id: undefined, commands: id => id.includes('vault') },
     {
-      prefix: 't',
+      prefix: ['t'],
       name: 'Text',
       id: undefined,
       commands: id => id.includes('toggle') && id.includes('editor'),
     },
-    { prefix: 'T', name: 'Table', id: undefined, commands: id => id.includes('table') },
+    { prefix: ['T'], name: 'Table', id: undefined, commands: id => id.includes('table') },
     {
-      prefix: 'n',
+      prefix: ['n'],
       name: 'Navigate',
       id: undefined,
       commands: id => id === 'app:go-back' || id === 'app:go-forward',
     },
-    { prefix: 'm', name: 'Markdown', id: undefined, commands: id => id.includes('markdown') },
-    { prefix: 'w', name: 'Windows', id: undefined, commands: id => id.includes('window') },
-    { prefix: 'c', name: 'Canvas', id: undefined, commands: id => id.includes('canvas') },
+    { prefix: ['m'], name: 'Markdown', id: undefined, commands: id => id.includes('markdown') },
+    { prefix: ['w'], name: 'Windows', id: undefined, commands: id => id.includes('window') },
+    { prefix: ['c'], name: 'Canvas', id: undefined, commands: id => id.includes('canvas') },
   ];
 
   // const suggestedMappings = [
@@ -643,6 +643,7 @@ class WhichKeyEditorPlugin implements PluginValue {
   // Only handle key presses when not in insert mode
   handleVimKeyPress = (event: KeyboardEvent) => {
     const { key } = event;
+
     // Ignore shift to allow capital letters for command categories
     // TODO: Ignore esc, backspace, etc.
     if (key === 'Shift') {
