@@ -240,17 +240,15 @@ function determinePrefixes(parentPrefix, commands) {
   // Loop through sorted prefix count, assign prefix to command
   // This ascribes the least common prefix to a command
 
-  // Decrement through prefix counts, popping assigned prefixes from the array
+  // Decrement through prefix counts, assigning prefixes starting with lowest frequency
   const sortedPrefixCounts = Object.entries(prefixCounts).sort(([, a], [, b]) => b - a);
-  log('sortedPrefixCounts', sortedPrefixCounts);
 
   for (let i = sortedPrefixCounts.length - 1; i >= 0; i--) {
     const [prefix] = sortedPrefixCounts[i];
 
     for (let j = 0; j < commands.length; j++) {
-      if (possiblePrefixes[j].includes(prefix)) {
+      if (!commands[j].prefix && possiblePrefixes[j].includes(prefix)) {
         commands[j].prefix = [parentPrefix, prefix];
-        sortedPrefixCounts.pop();
         break;
       }
     }
