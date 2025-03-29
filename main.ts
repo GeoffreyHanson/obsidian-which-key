@@ -220,7 +220,7 @@ class CommandTrie {
 // TODO: Prioritize numbers, filter out and, to, in, etc
 function determinePrefixes(parentPrefix, commands) {
   // Get counts for all commands in the bucket
-  log('bucketed commands:', commands);
+  // log('bucketed commands:', commands);
   const prefixCounts = {};
   const possiblePrefixes = commands.map(command => {
     const { id } = command;
@@ -233,8 +233,8 @@ function determinePrefixes(parentPrefix, commands) {
     return firstLetters;
   });
 
-  log('prefixCounts', prefixCounts);
-  log('possiblePrefixes', possiblePrefixes);
+  // log('prefixCounts', prefixCounts);
+  // log('possiblePrefixes', possiblePrefixes);
 
   // Loop through sorted prefix count, assign prefix to command
   // This ascribes the least common prefix to a command
@@ -253,7 +253,7 @@ function determinePrefixes(parentPrefix, commands) {
     }
   }
 
-  log('commands with prefixes:', commands);
+  // log('commands with prefixes:', commands);
   return commands;
 }
 
@@ -295,7 +295,7 @@ function curateCommands(app: App) {
     },
   ];
 
-  const nestedMappings = [
+  const intentMappings = [
     {
       prefix: 's',
       name: 'Search',
@@ -366,8 +366,9 @@ function curateCommands(app: App) {
   // ];
 
   const curatedCommands = [...topLevelMappings];
-  for (const { prefix, name, commands: condition } of nestedMappings) {
+  for (const { prefix, name, commands: condition } of intentMappings) {
     curatedCommands.push({ prefix, name });
+
     const bucket = [];
     for (const [id, command] of Object.entries(commands)) {
       if (condition(id)) {
@@ -383,7 +384,12 @@ function curateCommands(app: App) {
   const remainingCommands = Object.entries(commands).filter(([id]) => !curatedIds.has(id));
 
   curatedCommands.forEach(command => {
-    commandTrie.insertVimCommand(command);
+    if (command.prefix) {
+      commandTrie.insertVimCommand(command);
+    } else {
+      // Skip commands without a prefix or log them for debugging
+      console.log('Skipping command without prefix:', command.name);
+    }
   });
 
   log('commandTrie', commandTrie);
