@@ -197,8 +197,185 @@ class CommandTrie {
       current.isEndOfCommand = true;
     });
   }
+
+  // insertVimCommand({ prefix, name, commandId }) {
+  insertVimCommand({ name, id, prefix }) {
+    let current = this.root;
+
+    if (prefix) {
+      for (const key of prefix) {
+        if (!(key in current.children)) {
+          current.children[key] = new TrieNode();
+        }
+        current = current.children[key];
+      }
+    }
+
+    current.name = name;
+    current.commandId = id;
+    current.isEndOfCommand = true;
+  }
 }
 
+// BUGFIX: Some prefixes are being popped before assignment when they're the only option for some commands
+// TODO: Prioritize numbers, filter out and, to, in, etc
+function determinePrefixes(parentPrefix, commands) {
+  // Get counts for all commands in the bucket
+  log('bucketed commands:', commands);
+  const prefixCounts = {};
+  const possiblePrefixes = commands.map(command => {
+    const { id } = command;
+
+    // Split on : or -
+    const firstLetters = id.split(/[:-]/g).map(letter => letter[0]);
+
+    // Update counts
+    firstLetters.map(letter => (prefixCounts[letter] = (prefixCounts[letter] || 0) + 1));
+    return firstLetters;
+  });
+
+  log('prefixCounts', prefixCounts);
+  log('possiblePrefixes', possiblePrefixes);
+
+  // Loop through sorted prefix count, assign prefix to command
+  // This ascribes the least common prefix to a command
+
+  // Decrement through prefix counts, popping assigned prefixes from the array
+  const sortedPrefixCounts = Object.entries(prefixCounts).sort(([, a], [, b]) => b - a);
+  log('sortedPrefixCounts', sortedPrefixCounts);
+
+  for (let i = sortedPrefixCounts.length - 1; i >= 0; i--) {
+    const [prefix] = sortedPrefixCounts[i];
+
+    for (let j = 0; j < commands.length; j++) {
+      if (possiblePrefixes[j].includes(prefix)) {
+        commands[j].prefix = [parentPrefix, prefix];
+        sortedPrefixCounts.pop();
+        break;
+      }
+    }
+  }
+
+  log('commands with prefixes:', commands);
+  return commands;
+}
+
+function curateCommands(app: App) {
+  const { commands } = app.commands;
+  const commandTrie = new CommandTrie();
+  log('all commands:', commands);
+
+  const topLevelMappings = [
+    {
+      prefix: ' ',
+      name: 'Open Quick Switcher',
+      id: 'switcher:open',
+    },
+    {
+      prefix: '/',
+      name: 'Open Global Search',
+      id: 'global-search:open',
+    },
+    {
+      prefix: 'e',
+      name: 'Toggle left sidebar',
+      id: 'app:toggle-left-sidebar',
+    },
+    {
+      prefix: 'p',
+      name: 'Open command palette',
+      id: 'command-palette:open',
+    },
+    {
+      prefix: '|',
+      name: 'Split right',
+      id: 'workspace:split-vertical',
+    },
+    {
+      prefix: '-',
+      name: 'Split down',
+      id: 'workspace:split-horizontal',
+    },
+  ];
+
+  const nestedMappings = [
+    {
+      prefix: 's',
+      name: 'Search',
+      commands: id => id.includes('search') && !id.includes('bookmarks'),
+    },
+    { prefix: 'f', name: 'File', commands: id => id.includes('file') && !id.includes('canvas') },
+    { prefix: 'b', name: 'Backlink search', commands: id => id.includes('backlink') },
+    { prefix: 'B', name: 'Bookmarks', commands: id => id.includes('bookmarks') },
+    {
+      prefix: 'Tab',
+      name: 'Tab navigation',
+      commands: id =>
+        id.includes('tab') &&
+        !(id.includes('table') || id.includes('bookmarks') || id.includes('file-explorer')),
+    },
+    { prefix: 'v', name: 'Vault', commands: id => id.includes('vault') },
+    { prefix: 't', name: 'Text', commands: id => id.includes('toggle') && id.includes('editor') },
+    { prefix: 'T', name: 'Table', commands: id => id.includes('table') },
+    {
+      prefix: 'n',
+      name: 'Navigate',
+      commands: id => id === 'app:go-back' || id === 'app:go-forward',
+    },
+    { prefix: 'm', name: 'Markdown', commands: id => id.includes('markdown') },
+    { prefix: 'w', name: 'Windows', commands: id => id.includes('window') },
+    { prefix: 'c', name: 'Canvas', commands: id => id.includes('canvas') },
+  ];
+
+  // const suggestedMappings = [
+  //   { prefix: 's', name: 'Search', match: id => id.includes('search') && !id.includes('bookmark') },
+  //   { prefix: '/', name: 'Global Search', match: id => id.includes('global-search') },
+  //   { prefix: 'f', name: 'File Management', match: id => ['file', 'save', 'attachments', 'rename', 'duplicate', 'delete-file', 'open-with-default-app', 'export-pdf'].some(k => id.includes(k)) },
+  //   { prefix: 'b', name: 'Backlinks & Links', match: id => ['backlink', 'outgoing-links'].some(k => id.includes(k)) },
+  //   { prefix: 'B', name: 'Bookmarks', match: id => id.includes('bookmark') },
+  //   { prefix: 'Tab', name: 'Tabs', match: id => id.includes('tab') && !id.includes('table') && !id.includes('bookmarks') && !id.includes('file-explorer') },
+  //   { prefix: 'v', name: 'Vault & Windows', match: id => ['vault', 'window', 'open-sandbox'].some(k => id.includes(k)) },
+  //   { prefix: 't', name: 'Toggle & Text', match: id => (id.includes('toggle') && id.includes('editor')) || ['bold', 'italic', 'highlight', 'strikethrough', 'code', 'inline-math', 'blockquote', 'comments', 'clear-formatting'].some(k => id.includes(k)) },
+  //   { prefix: 'T', name: 'Tables', match: id => id.includes('table') },
+  //   { prefix: 'n', name: 'Navigation', match: id => ['navigate', 'go-back', 'go-forward', 'switcher', 'graph', 'outline', 'focus-', 'canvas:jump'].some(k => id.includes(k)) },
+  //   { prefix: 'm', name: 'Markdown & Metadata', match: id => ['markdown', 'metadata', 'alias', 'property'].some(k => id.includes(k)) },
+  //   { prefix: 'p', name: 'Pane & Splits', match: id => ['split', 'pane', 'stacked', 'pin'].some(k => id.includes(k)) },
+  //   { prefix: 'c', name: 'Canvas', match: id => id.includes('canvas') },
+  //   { prefix: 'd', name: 'Daily & Templates', match: id => ['daily-notes', 'template', 'templater', 'current-date', 'current-time'].some(k => id.includes(k)) },
+  //   { prefix: 'o', name: 'Open/Create', match: id => ['new-file', 'new-folder', 'open-link', 'follow-link', 'insert', 'embed', 'wikilink', 'callout', 'codeblock', 'horizontal-rule', 'mathblock', 'footnote', 'attach-file'].some(k => id.includes(k)) },
+  //   { prefix: 'z', name: 'Zoom', match: id => id.includes('zoom') },
+  //   { prefix: 'r', name: 'Recovery & Sync', match: id => ['recovery', 'sync', 'reload', 'undo-close', 'version-history'].some(k => id.includes(k)) },
+  //   { prefix: 'h', name: 'Help & Debug', match: id => ['help', 'debug', 'release-notes'].some(k => id.includes(k)) },
+  //   { prefix: 'x', name: 'Misc UI Toggle', match: id => ['ribbon', 'sidebar', 'theme', 'settings', 'always-on-top', 'default-new-pane-mode'].some(k => id.includes(k)) },
+  //   { prefix: 'q', name: 'Quick Actions', match: id => ['command-palette', 'composer', 'swap-line', 'delete-paragraph', 'cursor'].some(k => id.includes(k)) },
+  // ];
+
+  const curatedCommands = [...topLevelMappings];
+  for (const { prefix, name, commands: condition } of nestedMappings) {
+    curatedCommands.push({ prefix, name });
+    const bucket = [];
+    for (const [id, command] of Object.entries(commands)) {
+      if (condition(id)) {
+        bucket.push(command);
+      }
+    }
+    // Push array of commands with determined prefixes
+    curatedCommands.push(...determinePrefixes(prefix, bucket));
+  }
+
+  const curatedIds = new Set(topLevelMappings.map(mapping => mapping.commandId));
+
+  const remainingCommands = Object.entries(commands).filter(([id]) => !curatedIds.has(id));
+
+  curatedCommands.forEach(command => {
+    commandTrie.insertVimCommand(command);
+  });
+
+  log('commandTrie', commandTrie);
+  return commandTrie;
+}
+
+// TODO: Add setting to enable
 // Categorize commands and insert them into the trie
 function categorizeCommands(app: App) {
   const { commands } = app.commands;
@@ -235,7 +412,7 @@ function categorizeCommands(app: App) {
     commandTrie.insertCommands(category, relevantCommands);
   });
 
-  return commandTrie;
+  // return commandTrie;
 }
 
 /**
@@ -481,8 +658,10 @@ export default class WhichKey extends Plugin {
     await this.loadSettings();
 
     log(this.app);
+
     // Create the command trie
-    this.commandTrie = categorizeCommands(this.app);
+    this.commandTrie = curateCommands(this.app);
+    // this.commandTrie = categorizeCommands(this.app);
 
     // Initialize shared state with the command trie
     this.sharedState = new SharedState(this.app, this.commandTrie);
