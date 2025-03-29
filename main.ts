@@ -73,25 +73,28 @@ class CommandTrie {
   }
 
   /** Get command id for a prefix */
-  getCommandId(prefix: string) {
+  getCommandId(prefix: string[]) {
     let current = this.root;
+    log('getting command for prefix:', prefix);
 
     for (const key of prefix) {
       if (!(key in current.children)) {
+        log('no child found for key:', key);
         return null;
       }
       current = current.children[key];
     }
+
+    log('found command:', current.commandId);
     return current.commandId;
   }
 
   /** Get all possible completions for a prefix */
-  getPossibleCommands(prefix: string): Array<{ key: string; command: WhichKeyCommand }> {
+  getPossibleCommands(prefix?: string[]): Array<{ key: string; command: WhichKeyCommand }> {
     let current = this.root;
 
-    // If prefix is activation, no need to walk
-    if (prefix !== ' ') {
-      // Walk down to prefix node
+    // If prefix exists, walk down to the prefix node
+    if (prefix?.length) {
       for (const key of prefix) {
         if (!(key in current.children)) {
           return [];
@@ -100,6 +103,7 @@ class CommandTrie {
       }
     }
 
+    // Get all possible next keys from current node
     const possibilities: Array<{ key: string; command: WhichKeyCommand }> = [];
 
     Object.entries(current.children).forEach(([key, node]) => {
@@ -114,6 +118,7 @@ class CommandTrie {
       }
     });
 
+    log('possible commands:', possibilities);
     return possibilities;
   }
 
@@ -239,6 +244,7 @@ function determinePrefixes(parentPrefix, commands) {
   // Loop through sorted prefix count, assign prefix to command
   // This ascribes the least common prefix to a command
 
+  // TODO: Alternate lowercase and uppercase
   // Decrement through prefix counts, assigning prefixes starting with lowest frequency
   const sortedPrefixCounts = Object.entries(prefixCounts).sort(([, a], [, b]) => b - a);
 
@@ -446,7 +452,7 @@ class WhichKeyUI {
   }
 
   // UI methods focus purely on display
-  showCommands(commands: Array<{ key: string; command: WhichKeyCommand }>, prefix: string) {
+  showCommands(commands: Array<{ key: string; command: WhichKeyCommand }>, prefix?: string[]) {
     if (!this.container) {
       this.createContainer();
     }
@@ -456,7 +462,8 @@ class WhichKeyUI {
 
     const title = this.container.querySelector('.which-key-pressed');
     if (title) {
-      title.textContent = `Key sequence: ${prefix || 'Space'}`;
+      // Join the keys with a space for display
+      title.textContent = `Key sequence: ${prefix ? prefix.join(' ') : 'Space'}`;
     }
 
     const commandsEl = this.container.querySelector('.which-key-commands');
@@ -493,7 +500,7 @@ class WhichKeyUI {
 class SharedState {
   private app: App;
   private isRecording = false;
-  private currentKeySequence = '';
+  private currentKeySequence: string[] = [];
   private _insertMode = false;
   private ui: WhichKeyUI;
   commandTrie: CommandTrie;
@@ -523,11 +530,11 @@ class SharedState {
 
     if (key === ' ' && !this.isRecording) {
       this.isRecording = true;
-      this.currentKeySequence = ' ';
+      this.currentKeySequence = [];
 
       // Get commands and tell UI to display them
-      const commands = this.commandTrie.getPossibleCommands('');
-      this.ui.showCommands(commands, '');
+      const commands = this.commandTrie.getPossibleCommands();
+      this.ui.showCommands(commands);
 
       this.interceptKeyPress(event);
       return;
@@ -537,12 +544,11 @@ class SharedState {
     if (!this.isRecording) return;
     this.interceptKeyPress(event);
 
-    // Update the sequence
-    this.currentKeySequence = this.currentKeySequence === ' ' ? key : this.currentKeySequence + key;
+    this.currentKeySequence.push(key);
 
     // Show possible completions
     const commands = this.commandTrie.getPossibleCommands(this.currentKeySequence);
-    this.ui.showCommands(commands, this.currentKeySequence);
+    this.ui.showCommands(commands, ['Space', ...this.currentKeySequence]); // Add Space back just for display
 
     // Check if sequence resolves to a command
     const commandId = this.commandTrie.getCommandId(this.currentKeySequence);
@@ -558,7 +564,7 @@ class SharedState {
 
   private resetState() {
     this.isRecording = false;
-    this.currentKeySequence = '';
+    this.currentKeySequence = [];
   }
 }
 
