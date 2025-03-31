@@ -320,6 +320,7 @@ function curateCommands(app: App) {
     },
   ];
 
+  // TODO: Support misc & plugin commands by generating ids
   const intentMappings = [
     {
       prefix: ['s'],
@@ -331,7 +332,9 @@ function curateCommands(app: App) {
       prefix: ['f'],
       name: 'File',
       id: undefined,
-      commands: id => id.includes('file') && !id.includes('canvas'),
+      commands: id =>
+        (id.includes('file') || id.includes('attach')) &&
+        (!id.includes('canvas') || !id.includes('template')),
     },
     {
       prefix: ['b'],
@@ -345,15 +348,16 @@ function curateCommands(app: App) {
       name: 'Tab navigation',
       id: undefined,
       commands: id =>
-        id.includes('tab') &&
-        !(id.includes('table') || id.includes('bookmarks') || id.includes('file-explorer')),
+        (id.includes('tab') &&
+          !(id.includes('table') || id.includes('bookmarks') || id.includes('file-explorer'))) ||
+        (id.includes('close') && id.includes('workspace') && !id.includes('window')),
     },
     { prefix: ['v'], name: 'Vault', id: undefined, commands: id => id.includes('vault') },
     {
       prefix: ['t'],
       name: 'Text',
       id: undefined,
-      commands: id => id.includes('toggle') && id.includes('editor'),
+      commands: id => (id.includes('toggle') && id.includes('editor')) || id.includes('heading'),
     },
     { prefix: ['T'], name: 'Table', id: undefined, commands: id => id.includes('table') },
     {
@@ -364,13 +368,35 @@ function curateCommands(app: App) {
     },
     { prefix: ['m'], name: 'Markdown', id: undefined, commands: id => id.includes('markdown') },
     { prefix: ['w'], name: 'Windows', id: undefined, commands: id => id.includes('window') },
-    { prefix: ['c'], name: 'Canvas', id: undefined, commands: id => id.includes('canvas') },
     { prefix: ['u'], name: 'UI', id: undefined, commands: id => id.includes('theme') },
     {
       prefix: ['a'],
       name: 'App',
       id: undefined,
-      commands: id => id.includes('app') && !id.includes('vault') && !id.includes('go'),
+      commands: id =>
+        (id.includes('app') && !id.includes('vault') && !id.includes('go')) ||
+        (id.includes('export') && !id.includes('canvas')),
+    },
+    {
+      prefix: ['i'],
+      name: 'Insert',
+      id: undefined,
+      commands: id => id.includes('insert') && !id.includes('template'),
+    },
+
+    // Core Plugins
+    { prefix: ['c'], name: 'Canvas', id: undefined, commands: id => id.includes('canvas') },
+    {
+      prefix: ['d'],
+      name: 'Daily Notes',
+      id: undefined,
+      commands: id => id.includes('daily-notes'),
+    },
+    {
+      prefix: ['g'],
+      name: 'Graph',
+      id: undefined,
+      commands: id => id.includes('graph') && !id.includes('editor'),
     },
   ];
 
@@ -620,6 +646,7 @@ class WhichKeyEditorPlugin implements PluginValue {
     if (key === 'Shift') {
       return;
     }
+    // !!normalMode ?
     if (!WhichKeyEditorPlugin.sharedState.insertMode) {
       WhichKeyEditorPlugin.sharedState.updateKeySequence(event);
     }
