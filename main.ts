@@ -230,7 +230,7 @@ function determinePrefixes(parentPrefix, commands) {
     const { id, name } = command;
 
     // Split on : or - and grab the first letter of each word
-    // const firstLetters = id.split(/[:-]/g).map(letter => letter[0].toLowerCase());
+    // const firstLetters = id.split(/[:-]/g).map(word => word[0].toLowerCase());
 
     // Ignore command category and split on space
     const firstLetters = name
@@ -365,6 +365,13 @@ function curateCommands(app: App) {
     { prefix: ['m'], name: 'Markdown', id: undefined, commands: id => id.includes('markdown') },
     { prefix: ['w'], name: 'Windows', id: undefined, commands: id => id.includes('window') },
     { prefix: ['c'], name: 'Canvas', id: undefined, commands: id => id.includes('canvas') },
+    { prefix: ['u'], name: 'UI', id: undefined, commands: id => id.includes('theme') },
+    {
+      prefix: ['a'],
+      name: 'App',
+      id: undefined,
+      commands: id => id.includes('app') && !id.includes('vault') && !id.includes('go'),
+    },
   ];
 
   // const suggestedMappings = [
