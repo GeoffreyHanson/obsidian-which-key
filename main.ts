@@ -222,7 +222,7 @@ class CommandTrie {
   }
 }
 
-function determinePrefixes(parentPrefix, commands) {
+function determinePrefixes(prefixArray, commands) {
   // Get counts for all commands in the bucket
   // log('bucketed commands:', commands);
   const prefixCounts = {};
@@ -269,10 +269,10 @@ function determinePrefixes(parentPrefix, commands) {
         possiblePrefixes[j].has(prefix.toLowerCase()) &&
         Number.isNumber(prefix)
       ) {
-        commands[j].prefix = [parentPrefix, prefix];
+        commands[j].prefix = [...prefixArray, prefix];
         break;
       } else if (!commands[j].prefix && possiblePrefixes[j].has(prefix.toLowerCase())) {
-        commands[j].prefix = [parentPrefix, prefix];
+        commands[j].prefix = [...prefixArray, prefix];
         break;
       }
     }
