@@ -222,37 +222,56 @@ class CommandTrie {
   }
 }
 
-// TODO: Prioritize numbers, filter out and, to, in, etc
 function determinePrefixes(parentPrefix, commands) {
   // Get counts for all commands in the bucket
   // log('bucketed commands:', commands);
   const prefixCounts = {};
   const possiblePrefixes = commands.map(command => {
-    const { id } = command;
+    const { id, name } = command;
 
     // Split on : or - and grab the first letter of each word
-    const firstLetters = id.split(/[:-]/g).map(letter => letter[0]);
+    // const firstLetters = id.split(/[:-]/g).map(letter => letter[0].toLowerCase());
+
+    // Ignore command category and split on space
+    const firstLetters = name
+      .split(':')
+      .at(-1)
+      .trim()
+      .split(' ')
+      .map((word: string) => {
+        // Prioritize numbers
+        const number = word.match(/[0-9]/)?.[0];
+        if (number) return number;
+        // Skip special characters
+        if (word[0].match(/[^a-zA-Z0-9]/)) return;
+        return word[0].toLowerCase();
+      });
 
     // Update counts
-    firstLetters.map(letter => (prefixCounts[letter] = (prefixCounts[letter] || 0) + 1));
-    return firstLetters;
+    for (const letter of firstLetters) {
+      prefixCounts[letter] = (prefixCounts[letter] || 0) + 1;
+    }
+
+    return new Set(firstLetters);
   });
 
-  // log('prefixCounts', prefixCounts);
-  // log('possiblePrefixes', possiblePrefixes);
+  const sortedPrefixCounts = Object.entries(prefixCounts)
+    .sort(([, a], [, b]) => b - a)
+    .flatMap(([prefix]) => [prefix.toUpperCase(), prefix]);
 
-  // Loop through sorted prefix count, assign prefix to command
-  // This ascribes the least common prefix to a command
-
-  // TODO: Alternate lowercase and uppercase
-  // Decrement through prefix counts, assigning prefixes starting with lowest frequency
-  const sortedPrefixCounts = Object.entries(prefixCounts).sort(([, a], [, b]) => b - a);
-
+  // Decrement through sorted prefix counts, assigning prefixes starting with the least common
   for (let i = sortedPrefixCounts.length - 1; i >= 0; i--) {
-    const [prefix] = sortedPrefixCounts[i];
+    const prefix = sortedPrefixCounts[i];
 
     for (let j = 0; j < commands.length; j++) {
-      if (!commands[j].prefix && possiblePrefixes[j].includes(prefix)) {
+      if (
+        !commands[j].prefix &&
+        possiblePrefixes[j].has(prefix.toLowerCase()) &&
+        Number.isNumber(prefix)
+      ) {
+        commands[j].prefix = [parentPrefix, prefix];
+        break;
+      } else if (!commands[j].prefix && possiblePrefixes[j].has(prefix.toLowerCase())) {
         commands[j].prefix = [parentPrefix, prefix];
         break;
       }
@@ -385,8 +404,8 @@ function curateCommands(app: App) {
     curatedCommands.push(...determinePrefixes(prefix, bucket));
   }
 
+  // For checking against commands that haven't been sorted
   const curatedIds = new Set(topLevelMappings.map(mapping => mapping.commandId));
-
   const remainingCommands = Object.entries(commands).filter(([id]) => !curatedIds.has(id));
 
   curatedCommands.forEach(command => {
@@ -439,7 +458,7 @@ function categorizeCommands(app: App) {
     commandTrie.insertCommands(category, relevantCommands);
   });
 
-  // return commandTrie;
+  return commandTrie;
 }
 
 class WhichKeyUI {
