@@ -1,24 +1,25 @@
-/*
-
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
-
-If your plugin does not need CSS, delete this file.
-
-*/
-
 .which-key-container {
-    position: fixed;
-    top: auto;
+    position: absolute;
     bottom: 35px;
     right: 10px;
-    width: 30%;
-    height: 50%;
     background-color: var(--background-secondary);
+    border-color: var(--modal-border-color);
     /* z-index: 100; */
 }
 
 .which-key-commands {
     display: flex;
     flex-direction: column;
+}
+
+.which-key-prefix {
+    display: inline-flex;
+    color: var(--text-accent);
+    width: 20px;
+    justify-content: center;
+}
+
+.which-key-command-arrow {
+    --icon-size: 12px;
+    margin: 0 4px;
 }

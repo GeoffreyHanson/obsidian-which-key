@@ -1,4 +1,13 @@
-import { App, Editor, MarkdownView, Modal, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import {
+  App,
+  Editor,
+  MarkdownView,
+  Modal,
+  Plugin,
+  PluginSettingTab,
+  setIcon,
+  Setting,
+} from 'obsidian';
 import { EditorView, PluginValue, ViewPlugin, ViewUpdate } from '@codemirror/view';
 
 const { log } = console;
@@ -57,6 +66,7 @@ class TrieNode {
   children: Record<string, TrieNode>;
   name?: string;
   commandId?: string;
+  icon?: string;
   isEndOfCommand: boolean;
 
   constructor() {
@@ -204,7 +214,7 @@ class CommandTrie {
   }
 
   // insertVimCommand({ prefix, name, commandId }) {
-  insertVimCommand({ name, id, prefix }) {
+  insertVimCommand({ name, id, icon, prefix }) {
     let current = this.root;
 
     if (prefix) {
@@ -218,6 +228,7 @@ class CommandTrie {
 
     current.name = name;
     current.commandId = id || undefined;
+    current.icon = icon || 'gem';
     current.isEndOfCommand = !!id;
   }
 }
@@ -520,11 +531,34 @@ class WhichKeyUI {
 
     const commandsEl = this.container.querySelector('.which-key-commands');
     if (commandsEl) {
-      commandsEl.innerHTML = '';
+      commandsEl.textContent = '';
       commands.forEach(({ key, command }) => {
+        // const lucideIcon = command?.icon?.replace('lucide-', '');
+        // log('lucideIcon', lucideIcon);
         const cmdEl = document.createElement('div');
         cmdEl.addClass('which-key-command');
-        cmdEl.innerHTML = `${key}: ${prefix ? '' : '+'}${command.name}`;
+
+        const prefixEl = document.createElement('span');
+        const arrowEl = document.createElement('span');
+        const iconEl = document.createElement('span');
+        const nameEl = document.createElement('span');
+
+        prefixEl.addClass('which-key-prefix');
+        arrowEl.addClass('which-key-command-arrow');
+        iconEl.addClass('which-key-command-icon');
+        nameEl.addClass('which-key-name');
+
+        prefixEl.textContent = key;
+        // nameEl.textContent = `: ${prefix ? '' : '+'}${command.name}`;
+        nameEl.textContent = command.name;
+
+        cmdEl.appendChild(prefixEl);
+        cmdEl.appendChild(arrowEl);
+        setIcon(arrowEl, 'arrow-right');
+        // cmdEl.appendChild(iconEl);
+        // setIcon(iconEl, lucideIcon);
+        cmdEl.appendChild(nameEl);
+
         commandsEl.appendChild(cmdEl);
       });
     }
@@ -532,7 +566,7 @@ class WhichKeyUI {
 
   private createContainer() {
     this.container = document.createElement('div');
-    this.container.addClass('which-key-container');
+    this.container.addClass('which-key-container', 'dialog');
 
     const keyPressed = document.createElement('div');
     keyPressed.addClass('which-key-pressed');
