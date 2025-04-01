@@ -7,6 +7,11 @@
     /* z-index: 100; */
 }
 
+.which-key-command {
+    display: inline-flex;
+    align-items: center;
+}
+
 .which-key-commands {
     display: flex;
     flex-direction: column;
@@ -19,7 +24,17 @@
     justify-content: center;
 }
 
+.which-key-command-arrow,
+.which-key-command-icon {
+    margin: 0 4px;
+    display: flex;
+    align-items: center;
+}
+
 .which-key-command-arrow {
     --icon-size: 12px;
-    margin: 0 4px;
+}
+
+.which-key-command-icon {
+    --icon-size: 14px;
 }

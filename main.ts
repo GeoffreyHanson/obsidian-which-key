@@ -19,7 +19,8 @@ interface MyPluginSettings {
 // Define types for the WhichKey mappings
 interface WhichKeyCommand {
   name: string;
-  commandId?: string;
+  id?: string;
+  icon?: string;
   children?: Record<string, WhichKeyCommand>;
 }
 
@@ -41,7 +42,7 @@ interface ObsidianCommands {
 
 interface CategorizedCommand {
   name: string;
-  commandId: string;
+  id: string;
   icon: string;
   hotkeys: string[];
   callback?: any;
@@ -65,7 +66,7 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
 class TrieNode {
   children: Record<string, TrieNode>;
   name?: string;
-  commandId?: string;
+  id?: string;
   icon?: string;
   isEndOfCommand: boolean;
 
@@ -95,8 +96,7 @@ class CommandTrie {
       current = current.children[key];
     }
 
-    log('found command:', current.commandId);
-    return current.commandId;
+    return current.id;
   }
 
   /** Get all possible completions for a prefix */
@@ -122,7 +122,8 @@ class CommandTrie {
           key,
           command: {
             name: node.name,
-            commandId: node.commandId,
+            id: node.id,
+            icon: node.icon,
           },
         });
       }
@@ -155,7 +156,7 @@ class CommandTrie {
         categoryNode = current.children[prefix];
 
         categoryNode.name = category;
-        categoryNode.commandId = undefined;
+        categoryNode.id = undefined;
         categoryNode.isEndOfCommand = false;
 
         foundCategory = true;
@@ -208,7 +209,7 @@ class CommandTrie {
 
       // Now set the command properties on the current node
       current.name = command.name;
-      current.commandId = command.commandId;
+      current.id = command.id;
       current.isEndOfCommand = true;
     });
   }
@@ -227,9 +228,10 @@ class CommandTrie {
     }
 
     current.name = name;
-    current.commandId = id || undefined;
-    current.icon = icon || 'gem';
-    current.isEndOfCommand = !!id;
+    current.id = id || undefined;
+    current.icon = icon || 'keyboard';
+    // current.isEndOfCommand = !!id;
+    current.isEndOfCommand = !!current.children;
   }
 }
 
@@ -303,31 +305,37 @@ function curateCommands(app: App) {
       prefix: [' '],
       name: 'Open Quick Switcher',
       id: 'switcher:open',
+      icon: 'square-chevron-right',
     },
     {
       prefix: ['/'],
       name: 'Open Global Search',
       id: 'global-search:open',
+      icon: 'globe',
     },
     {
       prefix: ['e'],
       name: 'Toggle left sidebar',
       id: 'app:toggle-left-sidebar',
+      icon: 'panel-left',
     },
     {
       prefix: ['p'],
       name: 'Open command palette',
       id: 'command-palette:open',
+      icon: 'square-terminal',
     },
     {
       prefix: ['|'],
       name: 'Split right',
       id: 'workspace:split-vertical',
+      icon: 'separator-vertical',
     },
     {
       prefix: ['-'],
       name: 'Split down',
       id: 'workspace:split-horizontal',
+      icon: 'separator-horizontal',
     },
   ];
 
@@ -337,12 +345,14 @@ function curateCommands(app: App) {
       prefix: ['s'],
       name: 'Search',
       id: undefined,
+      icon: 'search',
       commands: id => id.includes('search') && !id.includes('bookmarks'),
     },
     {
       prefix: ['f'],
       name: 'File',
       id: undefined,
+      icon: 'file',
       commands: id =>
         (id.includes('file') || id.includes('attach')) &&
         (!id.includes('canvas') || !id.includes('template')),
@@ -351,39 +361,80 @@ function curateCommands(app: App) {
       prefix: ['b'],
       name: 'Backlink search',
       id: undefined,
+      icon: 'link',
       commands: id => id.includes('backlink'),
     },
-    { prefix: ['B'], name: 'Bookmarks', id: undefined, commands: id => id.includes('bookmarks') },
+    {
+      prefix: ['B'],
+      name: 'Bookmarks',
+      id: undefined,
+      icon: 'bookmark',
+      commands: id => id.includes('bookmarks'),
+    },
     {
       prefix: ['Tab'],
       name: 'Tab navigation',
       id: undefined,
+      icon: 'arrow-right-to-line',
       commands: id =>
         (id.includes('tab') &&
           !(id.includes('table') || id.includes('bookmarks') || id.includes('file-explorer'))) ||
         (id.includes('close') && id.includes('workspace') && !id.includes('window')),
     },
-    { prefix: ['v'], name: 'Vault', id: undefined, commands: id => id.includes('vault') },
+    {
+      prefix: ['v'],
+      name: 'Vault',
+      id: undefined,
+      icon: 'vault',
+      commands: id => id.includes('vault'),
+    },
     {
       prefix: ['t'],
       name: 'Text',
       id: undefined,
+      icon: 'text',
       commands: id => (id.includes('toggle') && id.includes('editor')) || id.includes('heading'),
     },
-    { prefix: ['T'], name: 'Table', id: undefined, commands: id => id.includes('table') },
+    {
+      prefix: ['T'],
+      name: 'Table',
+      id: undefined,
+      icon: 'table',
+      commands: id => id.includes('table'),
+    },
     {
       prefix: ['n'],
       name: 'Navigate',
       id: undefined,
+      icon: 'navigation',
       commands: id => id === 'app:go-back' || id === 'app:go-forward',
     },
-    { prefix: ['m'], name: 'Markdown', id: undefined, commands: id => id.includes('markdown') },
-    { prefix: ['w'], name: 'Windows', id: undefined, commands: id => id.includes('window') },
-    { prefix: ['u'], name: 'UI', id: undefined, commands: id => id.includes('theme') },
+    {
+      prefix: ['m'],
+      name: 'Markdown',
+      id: undefined,
+      icon: 'a-large-small',
+      commands: id => id.includes('markdown'),
+    },
+    {
+      prefix: ['w'],
+      name: 'Windows',
+      id: undefined,
+      icon: 'app-window',
+      commands: id => id.includes('window'),
+    },
+    {
+      prefix: ['u'],
+      name: 'UI',
+      id: undefined,
+      icon: 'palette',
+      commands: id => id.includes('theme'),
+    },
     {
       prefix: ['a'],
       name: 'App',
       id: undefined,
+      icon: 'dock',
       commands: id =>
         (id.includes('app') && !id.includes('vault') && !id.includes('go')) ||
         (id.includes('export') && !id.includes('canvas')),
@@ -392,21 +443,30 @@ function curateCommands(app: App) {
       prefix: ['i'],
       name: 'Insert',
       id: undefined,
+      icon: 'between-horizontal-start',
       commands: id => id.includes('insert') && !id.includes('template'),
     },
 
     // Core Plugins
-    { prefix: ['c'], name: 'Canvas', id: undefined, commands: id => id.includes('canvas') },
+    {
+      prefix: ['c'],
+      name: 'Canvas',
+      id: undefined,
+      icon: 'brush',
+      commands: id => id.includes('canvas'),
+    },
     {
       prefix: ['d'],
       name: 'Daily Notes',
       id: undefined,
+      icon: 'calendar',
       commands: id => id.includes('daily-notes'),
     },
     {
       prefix: ['g'],
       name: 'Graph',
       id: undefined,
+      icon: 'brain-circuit',
       commands: id => id.includes('graph') && !id.includes('editor'),
     },
   ];
@@ -435,8 +495,8 @@ function curateCommands(app: App) {
   // ];
 
   const curatedCommands = [...topLevelMappings];
-  for (const { prefix, name, commands: condition } of intentMappings) {
-    curatedCommands.push({ prefix, name });
+  for (const { prefix, name, commands: condition, icon } of intentMappings) {
+    curatedCommands.push({ prefix, name, icon });
 
     const bucket = [];
     for (const [id, command] of Object.entries(commands)) {
@@ -484,7 +544,7 @@ function categorizeCommands(app: App) {
 
     categorizedCommands[category][subCommand] = {
       name: command.name,
-      commandId: command.id,
+      id: command.id,
       icon: command.icon ?? '',
       hotkeys: command.hotkeys ?? [],
       callback: command.callback || command.editorCallback || command.checkCallback,
@@ -533,8 +593,7 @@ class WhichKeyUI {
     if (commandsEl) {
       commandsEl.textContent = '';
       commands.forEach(({ key, command }) => {
-        // const lucideIcon = command?.icon?.replace('lucide-', '');
-        // log('lucideIcon', lucideIcon);
+        const lucideIcon = command?.icon?.replace('lucide-', '');
         const cmdEl = document.createElement('div');
         cmdEl.addClass('which-key-command');
 
@@ -555,8 +614,8 @@ class WhichKeyUI {
         cmdEl.appendChild(prefixEl);
         cmdEl.appendChild(arrowEl);
         setIcon(arrowEl, 'arrow-right');
-        // cmdEl.appendChild(iconEl);
-        // setIcon(iconEl, lucideIcon);
+        cmdEl.appendChild(iconEl);
+        setIcon(iconEl, lucideIcon);
         cmdEl.appendChild(nameEl);
 
         commandsEl.appendChild(cmdEl);
