@@ -1,4 +1,10 @@
 const { log } = console;
+/**
+ * Determine prefixes for commands
+ * @param prefixArray - Array with intent prefix
+ * @param commands - Array of commands to determine prefixes for
+ * @returns Array of commands with determined prefixes
+ */
 export function determinePrefixes(prefixArray, commands) {
   // Counts for all commands in a given bucket
   const prefixCounts = {};
