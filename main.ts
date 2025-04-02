@@ -236,17 +236,22 @@ class CommandTrie {
 }
 
 function determinePrefixes(prefixArray, commands) {
-  // Get counts for all commands in the bucket
+  // Get counts for all commands in a given bucket
   // log('bucketed commands:', commands);
   const prefixCounts = {};
   const possiblePrefixes = commands.map(command => {
     const { id, name } = command;
 
     // Split on : or - and grab the first letter of each word
-    // const firstLetters = id.split(/[:-]/g).map(word => word[0].toLowerCase());
+    // const idFirstLetters = id.split(/[:-]/g).map(word => word[0].toLowerCase());
+    const idFirstLetters = id
+      .split(':')
+      .at(-1)
+      .split('-')
+      .map(word => word[0].toLowerCase());
 
     // Ignore command category and split on space
-    const firstLetters = name
+    const nameFirstLetters = name
       .split(':')
       .at(-1)
       .trim()
@@ -256,21 +261,26 @@ function determinePrefixes(prefixArray, commands) {
         const number = word.match(/[0-9]/)?.[0];
         if (number) return number;
         // Skip special characters
-        if (word[0].match(/[^a-zA-Z0-9]/)) return;
+        // if (word[0].match(/[^a-zA-Z0-9]/)) continue;
         return word[0].toLowerCase();
       });
+
+    const firstLetters = new Set([...nameFirstLetters, ...idFirstLetters]);
 
     // Update counts
     for (const letter of firstLetters) {
       prefixCounts[letter] = (prefixCounts[letter] || 0) + 1;
     }
 
+    // log('prefixCounts', prefixCounts, prefixArray);
     return new Set(firstLetters);
   });
 
   const sortedPrefixCounts = Object.entries(prefixCounts)
     .sort(([, a], [, b]) => b - a)
     .flatMap(([prefix]) => [prefix.toUpperCase(), prefix]);
+
+  // log('sortedPrefixCounts', sortedPrefixCounts);
 
   // Decrement through sorted prefix counts, assigning prefixes starting with the least common
   for (let i = sortedPrefixCounts.length - 1; i >= 0; i--) {
@@ -496,29 +506,6 @@ function curateCommands(app: App) {
       commands: id => id.includes('sync'),
     },
   ];
-
-  // const suggestedMappings = [
-  //   { prefix: 's', name: 'Search', match: id => id.includes('search') && !id.includes('bookmark') },
-  //   { prefix: '/', name: 'Global Search', match: id => id.includes('global-search') },
-  //   { prefix: 'f', name: 'File Management', match: id => ['file', 'save', 'attachments', 'rename', 'duplicate', 'delete-file', 'open-with-default-app', 'export-pdf'].some(k => id.includes(k)) },
-  //   { prefix: 'b', name: 'Backlinks & Links', match: id => ['backlink', 'outgoing-links'].some(k => id.includes(k)) },
-  //   { prefix: 'B', name: 'Bookmarks', match: id => id.includes('bookmark') },
-  //   { prefix: 'Tab', name: 'Tabs', match: id => id.includes('tab') && !id.includes('table') && !id.includes('bookmarks') && !id.includes('file-explorer') },
-  //   { prefix: 'v', name: 'Vault & Windows', match: id => ['vault', 'window', 'open-sandbox'].some(k => id.includes(k)) },
-  //   { prefix: 't', name: 'Toggle & Text', match: id => (id.includes('toggle') && id.includes('editor')) || ['bold', 'italic', 'highlight', 'strikethrough', 'code', 'inline-math', 'blockquote', 'comments', 'clear-formatting'].some(k => id.includes(k)) },
-  //   { prefix: 'T', name: 'Tables', match: id => id.includes('table') },
-  //   { prefix: 'n', name: 'Navigation', match: id => ['navigate', 'go-back', 'go-forward', 'switcher', 'graph', 'outline', 'focus-', 'canvas:jump'].some(k => id.includes(k)) },
-  //   { prefix: 'm', name: 'Markdown & Metadata', match: id => ['markdown', 'metadata', 'alias', 'property'].some(k => id.includes(k)) },
-  //   { prefix: 'p', name: 'Pane & Splits', match: id => ['split', 'pane', 'stacked', 'pin'].some(k => id.includes(k)) },
-  //   { prefix: 'c', name: 'Canvas', match: id => id.includes('canvas') },
-  //   { prefix: 'd', name: 'Daily & Templates', match: id => ['daily-notes', 'template', 'templater', 'current-date', 'current-time'].some(k => id.includes(k)) },
-  //   { prefix: 'o', name: 'Open/Create', match: id => ['new-file', 'new-folder', 'open-link', 'follow-link', 'insert', 'embed', 'wikilink', 'callout', 'codeblock', 'horizontal-rule', 'mathblock', 'footnote', 'attach-file'].some(k => id.includes(k)) },
-  //   { prefix: 'z', name: 'Zoom', match: id => id.includes('zoom') },
-  //   { prefix: 'r', name: 'Recovery & Sync', match: id => ['recovery', 'sync', 'reload', 'undo-close', 'version-history'].some(k => id.includes(k)) },
-  //   { prefix: 'h', name: 'Help & Debug', match: id => ['help', 'debug', 'release-notes'].some(k => id.includes(k)) },
-  //   { prefix: 'x', name: 'Misc UI Toggle', match: id => ['ribbon', 'sidebar', 'theme', 'settings', 'always-on-top', 'default-new-pane-mode'].some(k => id.includes(k)) },
-  //   { prefix: 'q', name: 'Quick Actions', match: id => ['command-palette', 'composer', 'swap-line', 'delete-paragraph', 'cursor'].some(k => id.includes(k)) },
-  // ];
 
   const curatedCommands = [...topLevelMappings];
   for (const { prefix, name, commands: condition, icon } of intentMappings) {
