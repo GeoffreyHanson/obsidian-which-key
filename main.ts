@@ -291,6 +291,9 @@ function determinePrefixes(prefixArray, commands) {
     }
   }
 
+  const unassignedCommands = commands.filter(command => !command.prefix);
+  log('unassignedCommands', unassignedCommands);
+
   // log('commands with prefixes:', commands);
   return commands;
 }
@@ -354,15 +357,15 @@ function curateCommands(app: App) {
       id: undefined,
       icon: 'file',
       commands: id =>
-        (id.includes('file') || id.includes('attach')) &&
-        (!id.includes('canvas') || !id.includes('template')),
+        ((id.includes('file') || id.includes('attach')) && !id.includes('canvas')) ||
+        id.includes('template'),
     },
     {
-      prefix: ['b'],
-      name: 'Backlink search',
+      prefix: ['l'],
+      name: 'Links',
       id: undefined,
       icon: 'link',
-      commands: id => id.includes('backlink'),
+      commands: id => id.includes('link'),
     },
     {
       prefix: ['B'],
@@ -379,7 +382,9 @@ function curateCommands(app: App) {
       commands: id =>
         (id.includes('tab') &&
           !(id.includes('table') || id.includes('bookmarks') || id.includes('file-explorer'))) ||
-        (id.includes('close') && id.includes('workspace') && !id.includes('window')),
+        (id.includes('close') && id.includes('workspace') && !id.includes('window')) ||
+        id.includes('focus') ||
+        id === 'workspace:toggle-pin',
     },
     {
       prefix: ['v'],
@@ -393,7 +398,16 @@ function curateCommands(app: App) {
       name: 'Text',
       id: undefined,
       icon: 'text',
-      commands: id => (id.includes('toggle') && id.includes('editor')) || id.includes('heading'),
+      commands: id =>
+        (id.includes('toggle') && id.includes('editor')) ||
+        id.includes('heading') ||
+        (id.includes('fold') && !id.includes('file')) ||
+        id.includes('clear-formatting') ||
+        id.includes('cycle-list-checklist') ||
+        id.includes('swap-line') ||
+        id.includes('add-cursor') ||
+        id.includes('delete-paragraph') ||
+        id.includes('context-menu'),
     },
     {
       prefix: ['T'],
@@ -437,14 +451,19 @@ function curateCommands(app: App) {
       icon: 'dock',
       commands: id =>
         (id.includes('app') && !id.includes('vault') && !id.includes('go')) ||
-        (id.includes('export') && !id.includes('canvas')),
+        (id.includes('export') && !id.includes('canvas')) ||
+        (id.includes('copy') && id.includes('workspace')) ||
+        id === 'workspace:show-trash' ||
+        (id.includes('editor') && id.includes('focus')) ||
+        id.includes('tag-pane') ||
+        id.includes('outline'),
     },
     {
       prefix: ['i'],
       name: 'Insert',
       id: undefined,
       icon: 'between-horizontal-start',
-      commands: id => id.includes('insert') && !id.includes('template'),
+      commands: id => id.includes('insert'),
     },
 
     // Core Plugins
@@ -468,6 +487,13 @@ function curateCommands(app: App) {
       id: undefined,
       icon: 'brain-circuit',
       commands: id => id.includes('graph') && !id.includes('editor'),
+    },
+    {
+      prefix: ['s'],
+      name: 'Sync',
+      id: undefined,
+      icon: 'folder-sync',
+      commands: id => id.includes('sync'),
     },
   ];
 
@@ -509,8 +535,10 @@ function curateCommands(app: App) {
   }
 
   // For checking against commands that haven't been sorted
-  const curatedIds = new Set(topLevelMappings.map(mapping => mapping.commandId));
+  // const curatedIds = new Set(topLevelMappings.map(mapping => mapping.id));
+  const curatedIds = new Set(curatedCommands.map(command => command.id));
   const remainingCommands = Object.entries(commands).filter(([id]) => !curatedIds.has(id));
+  log('remainingCommands', remainingCommands);
 
   curatedCommands.forEach(command => {
     if (command.prefix) {
