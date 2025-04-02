@@ -238,6 +238,13 @@ class CommandTrie {
 
 function curateCommands(app: App) {
   const { commands } = app.commands;
+  const commandsToCurate = Object.values(commands).map(({ name, id, icon, hotkeys }) => ({
+    name,
+    id,
+    icon,
+    hotkeys,
+  }));
+
   const commandTrie = new CommandTrie();
   log('all commands:', commands);
 
@@ -437,14 +444,17 @@ function curateCommands(app: App) {
 
   const curatedCommands = [...topLevelMappings];
   for (const { prefix, name, commands: condition, icon } of intentMappings) {
+    // Push top level intent mappings
     curatedCommands.push({ prefix, name, icon });
 
     const bucket = [];
-    for (const [id, command] of Object.entries(commands)) {
-      if (condition(id)) {
+
+    for (const command of commandsToCurate) {
+      if (condition(command.id)) {
         bucket.push(command);
       }
     }
+
     // Push array of commands with determined prefixes
     curatedCommands.push(...determinePrefixes(prefix, bucket));
   }
