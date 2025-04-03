@@ -189,6 +189,7 @@ export function buildCommandTrie(commands: CuratedCommand[], commandTrie: any): 
       console.log('Skipping command without prefix:', command.name);
     }
   });
+  log('commandTrie', commandTrie);
   return commandTrie;
 }
 
@@ -214,15 +215,12 @@ export function curateCommands(
 
   for (const { prefix, name, pattern, icon } of intentMappings) {
     // Push top level intent mappings
-    curatedCommands.push({ prefix, name, icon, id: name } as CuratedCommand);
+    curatedCommands.push({ prefix, name, icon } as CuratedCommand);
 
     const bucket = filterCommandsByIntent(commandsToCurate, pattern);
 
     // Push array of commands with determined prefixes
-    const commandsWithPrefixes = determinePrefixes(prefix, bucket);
-    curatedCommands.push(
-      ...commandsWithPrefixes.filter((cmd): cmd is CuratedCommand => cmd.prefix !== undefined)
-    );
+    curatedCommands.push(...determinePrefixes(prefix, bucket));
   }
 
   // Track curated command IDs
