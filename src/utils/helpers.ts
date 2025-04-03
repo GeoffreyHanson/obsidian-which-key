@@ -1,6 +1,6 @@
 const { log } = console;
 
-interface ObsidianCommand {
+export interface ObsidianCommand {
   id: string;
   name: string;
   prefix?: string[];
@@ -8,7 +8,7 @@ interface ObsidianCommand {
   hotkeys?: string[];
 }
 
-interface PrefixAssignmentContext {
+export interface PrefixAssignmentContext {
   commands: ObsidianCommand[];
   possiblePrefixes: Set<string>[];
   prefixesToAssign: string[];
@@ -20,7 +20,7 @@ interface PrefixAssignmentContext {
  * @param id - Command ID string
  * @returns Array of lowercase first letters
  */
-function extractIdFirstLetters(id: string): string[] {
+export function extractIdFirstLetters(id: string): string[] {
   const idWithoutCategory = id.split(':').pop() || id;
   return idWithoutCategory.split('-').map(word => word[0]?.toLowerCase() || '');
 }
@@ -30,7 +30,7 @@ function extractIdFirstLetters(id: string): string[] {
  * @param name - Command name string
  * @returns Array of lowercase first letters (prioritizing numbers)
  */
-function extractNameFirstLetters(name: string): string[] {
+export function extractNameFirstLetters(name: string): string[] {
   const nameWithoutCategory = name.split(':').pop() || name;
   return nameWithoutCategory
     .trim()
@@ -49,10 +49,10 @@ function extractNameFirstLetters(name: string): string[] {
  * @param prefixCounts - Frequency counts of prefixes
  * @returns Array of prefixes sorted in descending order by frequency and including uppercase variants
  */
-function generateSortedPrefixes(prefixCounts: Record<string, number>): string[] {
+export function generateSortedPrefixes(prefixCounts: Record<string, number>): string[] {
   return Object.entries(prefixCounts)
-    .sort(([, a], [, b]) => b - a)
-    .flatMap(([prefix]) => [prefix.toUpperCase(), prefix]);
+    .sort(([, a], [, b]) => a - b)
+    .flatMap(([prefix]) => [prefix, prefix.toUpperCase()]);
 }
 
 /**
@@ -60,20 +60,19 @@ function generateSortedPrefixes(prefixCounts: Record<string, number>): string[] 
  * @param context - The context object containing all necessary data
  * @returns Updated commands array with assigned prefixes
  */
-function assignPrefixesToCommands(context: PrefixAssignmentContext): ObsidianCommand[] {
+export function assignPrefixesToCommands(context: PrefixAssignmentContext): ObsidianCommand[] {
   const { commands, possiblePrefixes, prefixesToAssign, parentPrefix } = context;
 
   // Process prefixes from least common to most common
-  for (let i = prefixesToAssign.length - 1; i >= 0; i--) {
-    const prefix = prefixesToAssign[i];
-
-    for (let j = 0; j < commands.length; j++) {
+  for (const prefix of prefixesToAssign) {
+    // Loop through commands, indexing against possiblePrefixes
+    for (let i = 0; i < commands.length; i++) {
       // Skip commands that already have a prefix
-      if (commands[j].prefix) continue;
+      if (commands[i].prefix) continue;
 
       // Check if this command can use this prefix
-      if (possiblePrefixes[j].has(prefix.toLowerCase())) {
-        commands[j].prefix = [...parentPrefix, prefix];
+      if (possiblePrefixes[i].has(prefix.toLowerCase())) {
+        commands[i].prefix = [...parentPrefix, prefix];
         break; // Move to next prefix after assigning this one
       }
     }
@@ -100,7 +99,7 @@ export function determinePrefixes(
     const { id, name } = command;
 
     // Get candidate letters from the command's ID and name; deduplicate
-    const firstLetters = new Set([...extractNameFirstLetters(name), ...extractIdFirstLetters(id)]);
+    const firstLetters = new Set([...extractIdFirstLetters(id), ...extractNameFirstLetters(name)]);
 
     // Update frequency counts
     for (const letter of firstLetters) {
@@ -111,7 +110,7 @@ export function determinePrefixes(
   });
 
   // Generate sorted list of prefixes to try assigning
-  const prefixesToAssign = generateSortedPrefixes(prefixCounts);
+  const prefixesToAssign = generateSortedPrefixes(prefixCounts); // e.g. ['a', 'A']
   log('sortedPrefixCounts', prefixesToAssign);
 
   // Assign prefixes to commands
