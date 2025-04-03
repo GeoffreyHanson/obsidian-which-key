@@ -6,6 +6,10 @@ import {
   assignPrefixesToCommands,
   type PrefixAssignmentContext,
   type ObsidianCommand,
+  type CuratedCommand,
+  shuckCommands as shuckCommands,
+  buildCommandTrie,
+  curateCommands,
 } from './helpers';
 
 describe('Helper Functions', () => {
@@ -222,6 +226,71 @@ describe('Helper Functions', () => {
 
       expect(result[0].prefix).toEqual(['a', 'o']);
       expect(result[1].prefix).toEqual(['a', 'O']);
+    });
+  });
+
+  describe('transformCommands', () => {
+    it('should shuck key and keep value', () => {
+      const rawCommands = {
+        cmd1: { name: 'Command 1', id: 'cmd1', icon: 'icon1', hotkeys: ['Ctrl+A'] },
+        cmd2: { name: 'Command 2', id: 'cmd2', icon: 'icon2', hotkeys: ['Ctrl+B'] },
+      };
+
+      const result = shuckCommands(rawCommands);
+
+      expect(result).toEqual([
+        { name: 'Command 1', id: 'cmd1', icon: 'icon1', hotkeys: ['Ctrl+A'] },
+        { name: 'Command 2', id: 'cmd2', icon: 'icon2', hotkeys: ['Ctrl+B'] },
+      ]);
+    });
+  });
+
+  describe('buildCommandTrie', () => {
+    it('should insert commands with prefixes into trie', () => {
+      const commands: CuratedCommand[] = [
+        { id: 'cmd1', name: 'Command 1', prefix: ['a'] },
+        { id: 'cmd2', name: 'Command 2', prefix: ['b'] },
+      ];
+
+      const mockTrie = {
+        insertVimCommand: jest.fn(),
+      };
+
+      buildCommandTrie(commands, mockTrie);
+
+      expect(mockTrie.insertVimCommand).toHaveBeenCalledTimes(2);
+      expect(mockTrie.insertVimCommand).toHaveBeenCalledWith(commands[0]);
+      expect(mockTrie.insertVimCommand).toHaveBeenCalledWith(commands[1]);
+    });
+  });
+
+  describe('curateCommands', () => {
+    it('should curate commands and build trie', () => {
+      const rawCommands = {
+        'search:find': { name: 'Find', id: 'search:find' },
+        'search:replace': { name: 'Replace', id: 'search:replace' },
+        'file:open': { name: 'Open File', id: 'file:open' },
+      };
+
+      const topLevelMappings = [{ prefix: [' '], name: 'Space', id: 'space', icon: 'space' }];
+
+      const intentMappings = [
+        {
+          prefix: ['s'],
+          name: 'Search',
+          icon: 'search',
+          commands: (id: string) => id.includes('search'),
+        },
+      ];
+
+      const mockCommandTrie = jest.fn().mockImplementation(() => ({
+        insertVimCommand: jest.fn(),
+      }));
+
+      const result = curateCommands(rawCommands, topLevelMappings, intentMappings, mockCommandTrie);
+
+      expect(result).toBeDefined();
+      expect(result.insertVimCommand).toHaveBeenCalled();
     });
   });
 });

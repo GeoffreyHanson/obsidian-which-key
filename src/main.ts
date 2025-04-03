@@ -9,8 +9,8 @@ import {
   Setting,
 } from 'obsidian';
 import { EditorView, PluginValue, ViewPlugin, ViewUpdate } from '@codemirror/view';
-import { determinePrefixes } from 'src/utils/helpers';
-import { topLevelMappings, intentMappings } from 'src/utils/constants';
+import { curateCommands } from 'src/utils/helpers';
+import { topLevelMappings, intentMappings } from './utils/constants';
 
 const { log } = console;
 
@@ -237,52 +237,52 @@ class CommandTrie {
   }
 }
 
-function curateCommands(commands) {
-  const commandsToCurate = Object.values(commands).map(({ name, id, icon, hotkeys }) => ({
-    name,
-    id,
-    icon,
-    hotkeys,
-  }));
+// function curateCommands(commands) {
+//   const commandsToCurate = Object.values(commands).map(({ name, id, icon, hotkeys }) => ({
+//     name,
+//     id,
+//     icon,
+//     hotkeys,
+//   }));
 
-  const commandTrie = new CommandTrie();
-  log('all commands:', commands);
+//   const commandTrie = new CommandTrie();
+//   log('all commands:', commands);
 
-  const curatedCommands = [...topLevelMappings];
-  for (const { prefix, name, commands: condition, icon } of intentMappings) {
-    // Push top level intent mappings
-    curatedCommands.push({ prefix, name, icon });
+//   const curatedCommands = [...topLevelMappings];
+//   for (const { prefix, name, commands: condition, icon } of intentMappings) {
+//     // Push top level intent mappings
+//     curatedCommands.push({ prefix, name, icon });
 
-    const bucket = [];
+//     const bucket = [];
 
-    for (const command of commandsToCurate) {
-      if (condition(command.id)) {
-        bucket.push(command);
-      }
-    }
+//     for (const command of commandsToCurate) {
+//       if (condition(command.id)) {
+//         bucket.push(command);
+//       }
+//     }
 
-    // Push array of commands with determined prefixes
-    curatedCommands.push(...determinePrefixes(prefix, bucket));
-  }
+//     // Push array of commands with determined prefixes
+//     curatedCommands.push(...determinePrefixes(prefix, bucket));
+//   }
 
-  // For checking against commands that haven't been sorted
-  // const curatedIds = new Set(topLevelMappings.map(mapping => mapping.id));
-  const curatedIds = new Set(curatedCommands.map(command => command.id));
-  const remainingCommands = Object.entries(commands).filter(([id]) => !curatedIds.has(id));
-  log('remainingCommands', remainingCommands);
+//   // For checking against commands that haven't been sorted
+//   // const curatedIds = new Set(topLevelMappings.map(mapping => mapping.id));
+//   const curatedIds = new Set(curatedCommands.map(command => command.id));
+//   const remainingCommands = Object.entries(commands).filter(([id]) => !curatedIds.has(id));
+//   log('remainingCommands', remainingCommands);
 
-  curatedCommands.forEach(command => {
-    if (command.prefix) {
-      commandTrie.insertVimCommand(command);
-    } else {
-      // Skip commands without a prefix or log them for debugging
-      console.log('Skipping command without prefix:', command.name);
-    }
-  });
+//   curatedCommands.forEach(command => {
+//     if (command.prefix) {
+//       commandTrie.insertVimCommand(command);
+//     } else {
+//       // Skip commands without a prefix or log them for debugging
+//       console.log('Skipping command without prefix:', command.name);
+//     }
+//   });
 
-  log('commandTrie', commandTrie);
-  return commandTrie;
-}
+//   log('commandTrie', commandTrie);
+//   return commandTrie;
+// }
 
 // TODO: Add setting to enable
 // Categorize commands and insert them into the trie
@@ -531,8 +531,12 @@ export default class WhichKey extends Plugin {
     log(this.app);
 
     // Create the command trie
-    this.commandTrie = curateCommands(this.app.commands.commands);
-    // this.commandTrie = categorizeCommands(this.app.commands.commands);
+    this.commandTrie = curateCommands(
+      this.app.commands.commands,
+      topLevelMappings,
+      intentMappings,
+      CommandTrie
+    );
 
     // Initialize shared state with the command trie
     const ui = new WhichKeyUI(this.app);

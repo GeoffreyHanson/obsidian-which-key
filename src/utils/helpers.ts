@@ -15,6 +15,25 @@ export interface PrefixAssignmentContext {
   parentPrefix: string[];
 }
 
+export interface IntentMapping {
+  prefix: string[];
+  name: string;
+  id?: string;
+  icon?: string;
+  commands: (id: string) => boolean;
+}
+
+export interface CuratedCommand extends ObsidianCommand {
+  prefix: string[];
+}
+
+export interface TopLevelMapping {
+  prefix: string[];
+  name: string;
+  id: string;
+  icon?: string;
+}
+
 /**
  * Extract first letters from command ID (after the colon and split by hyphens)
  * @param id - Command ID string
@@ -127,4 +146,90 @@ export function determinePrefixes(
 
   log('commands with prefixes:', updatedCommands);
   return updatedCommands;
+}
+
+/**
+ * Transform raw commands into a standardized format
+ * @param commands - Raw commands object from Obsidian
+ * @returns Array of standardized commands
+ */
+export function shuckCommands(commands: Record<string, any>): ObsidianCommand[] {
+  return Object.values(commands).map(({ name, id, icon, hotkeys }) => ({
+    name,
+    id,
+    icon,
+    hotkeys,
+  }));
+}
+
+/**
+ * Filter commands based on intent mapping conditions
+ * @param commands - Array of commands to filter
+ * @param condition - Function that determines if a command matches the intent
+ * @returns Array of filtered commands
+ */
+export function filterCommandsByIntent(
+  commands: ObsidianCommand[],
+  condition: (id: string) => boolean
+): ObsidianCommand[] {
+  return commands.filter(command => condition(command.id));
+}
+
+/**
+ * Build a command trie from curated commands
+ * @param commands - Array of curated commands
+ * @param commandTrie - CommandTrie instance to populate
+ * @returns Populated CommandTrie instance
+ */
+export function buildCommandTrie(commands: CuratedCommand[], commandTrie: any): any {
+  commands.forEach(command => {
+    if (command.prefix) {
+      commandTrie.insertVimCommand(command);
+    } else {
+      console.log('Skipping command without prefix:', command.name);
+    }
+  });
+  return commandTrie;
+}
+
+/**
+ * Curate commands by applying intent mappings and building a command trie
+ * @param commands - Raw commands from Obsidian
+ * @param topLevelMappings - Array of top-level command mappings
+ * @param intentMappings - Array of intent-based command mappings
+ * @param CommandTrie - CommandTrie class constructor
+ * @returns Populated CommandTrie instance
+ */
+export function curateCommands(
+  commands: Record<string, any>,
+  topLevelMappings: TopLevelMapping[],
+  intentMappings: IntentMapping[],
+  CommandTrie: any
+): any {
+  const commandsToCurate = shuckCommands(commands);
+  const commandTrie = new CommandTrie();
+  console.log('all commands:', commands);
+
+  const curatedCommands: CuratedCommand[] = [...topLevelMappings];
+
+  for (const { prefix, name, commands: condition, icon } of intentMappings) {
+    // Push top level intent mappings
+    curatedCommands.push({ prefix, name, icon, id: name } as CuratedCommand);
+
+    const bucket = filterCommandsByIntent(commandsToCurate, condition);
+
+    // Push array of commands with determined prefixes
+    const commandsWithPrefixes = determinePrefixes(prefix, bucket);
+    curatedCommands.push(
+      ...commandsWithPrefixes.filter((cmd): cmd is CuratedCommand => cmd.prefix !== undefined)
+    );
+    // curatedCommands.push(...determinePrefixes(prefix, bucket));
+  }
+
+  // Track curated command IDs
+  const curatedIds = new Set(curatedCommands.map(command => command.id));
+  const remainingCommands = Object.entries(commands).filter(([id]) => !curatedIds.has(id));
+  console.log('remainingCommands', remainingCommands);
+
+  return buildCommandTrie(curatedCommands, commandTrie);
 }
