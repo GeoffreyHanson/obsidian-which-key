@@ -13,6 +13,7 @@
 		"plugin",
 		"which-key",
 		"keybindings",
+		"shortcuts",
 		"menu",
 		"vim",
 		"emacs"
