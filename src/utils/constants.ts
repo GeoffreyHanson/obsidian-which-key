@@ -43,121 +43,101 @@ export const intentMappings = [
     name: 'Search',
     id: undefined,
     icon: 'search',
-    commands: id => id.includes('search') && !id.includes('bookmarks'),
+    pattern: /search:(?!.*bookmarks)/,
   },
   {
     prefix: ['f'],
     name: 'File',
     id: undefined,
     icon: 'file',
-    commands: id =>
-      ((id.includes('file') || id.includes('attach')) && !id.includes('canvas')) ||
-      id.includes('template'),
+    pattern: /(?:file|attach|template)(?!.*canvas)/,
   },
   {
     prefix: ['l'],
     name: 'Links',
     id: undefined,
     icon: 'link',
-    commands: id => id.includes('link'),
+    pattern: /link/,
   },
   {
     prefix: ['B'],
     name: 'Bookmarks',
     id: undefined,
     icon: 'bookmark',
-    commands: id => id.includes('bookmarks'),
+    pattern: /bookmarks/,
   },
   {
     prefix: ['Tab'],
     name: 'Tab navigation',
     id: undefined,
     icon: 'arrow-right-to-line',
-    commands: id =>
-      (id.includes('tab') &&
-        !(id.includes('table') || id.includes('bookmarks') || id.includes('file-explorer'))) ||
-      (id.includes('close') && id.includes('workspace') && !id.includes('window')) ||
-      id.includes('focus') ||
-      id === 'workspace:toggle-pin',
+    pattern:
+      /(?:tab|focus|workspace:toggle-pin|workspace:close)(?!.*(?:table|bookmarks|file-explorer|window))/,
   },
   {
     prefix: ['v'],
     name: 'Vault',
     id: undefined,
     icon: 'vault',
-    commands: id => id.includes('vault'),
+    pattern: /vault/,
   },
   {
     prefix: ['t'],
     name: 'Text',
     id: undefined,
     icon: 'text',
-    commands: id =>
-      (id.includes('toggle') && id.includes('editor')) ||
-      id.includes('heading') ||
-      (id.includes('fold') && !id.includes('file')) ||
-      id.includes('clear-formatting') ||
-      id.includes('cycle-list-checklist') ||
-      id.includes('swap-line') ||
-      id.includes('add-cursor') ||
-      id.includes('delete-paragraph') ||
-      id.includes('context-menu'),
+    pattern:
+      /(?:editor:toggle|heading|clear-formatting|cycle-list-checklist|swap-line|add-cursor|delete-paragraph|context-menu|fold(?!.*file))/,
   },
   {
     prefix: ['T'],
     name: 'Table',
     id: undefined,
     icon: 'table',
-    commands: id => id.includes('table'),
+    pattern: /table/,
   },
   {
     prefix: ['n'],
     name: 'Navigate',
     id: undefined,
     icon: 'navigation',
-    commands: id => id === 'app:go-back' || id === 'app:go-forward',
+    pattern: /app:go-(?:back|forward)$/,
   },
   {
     prefix: ['m'],
     name: 'Markdown',
     id: undefined,
     icon: 'a-large-small',
-    commands: id => id.includes('markdown'),
+    pattern: /markdown/,
   },
   {
     prefix: ['w'],
     name: 'Windows',
     id: undefined,
     icon: 'app-window',
-    commands: id => id.includes('window'),
+    pattern: /window/,
   },
   {
     prefix: ['u'],
     name: 'UI',
     id: undefined,
     icon: 'palette',
-    commands: id => id.includes('theme'),
+    pattern: /theme/,
   },
   {
     prefix: ['a'],
     name: 'App',
     id: undefined,
     icon: 'dock',
-    commands: id =>
-      (id.includes('app') && !id.includes('vault') && !id.includes('go')) ||
-      (id.includes('export') && !id.includes('canvas')) ||
-      (id.includes('copy') && id.includes('workspace')) ||
-      id === 'workspace:show-trash' ||
-      (id.includes('editor') && id.includes('focus')) ||
-      id.includes('tag-pane') ||
-      id.includes('outline'),
+    pattern:
+      /(?:app(?!.*(?:vault|go))|export(?!.*canvas)|workspace:(?:show-trash|copy)|editor:focus|tag-pane|outline)/,
   },
   {
     prefix: ['i'],
     name: 'Insert',
     id: undefined,
     icon: 'between-horizontal-start',
-    commands: id => id.includes('insert'),
+    pattern: /insert/,
   },
 
   // Core Plugins
@@ -166,27 +146,27 @@ export const intentMappings = [
     name: 'Canvas',
     id: undefined,
     icon: 'brush',
-    commands: id => id.includes('canvas'),
+    pattern: /canvas/,
   },
   {
     prefix: ['d'],
     name: 'Daily Notes',
     id: undefined,
     icon: 'calendar',
-    commands: id => id.includes('daily-notes'),
+    pattern: /daily-notes/,
   },
   {
     prefix: ['g'],
     name: 'Graph',
     id: undefined,
     icon: 'brain-circuit',
-    commands: id => id.includes('graph') && !id.includes('editor'),
+    pattern: /graph(?!.*editor)/,
   },
   {
     prefix: ['s'],
     name: 'Sync',
     id: undefined,
     icon: 'folder-sync',
-    commands: id => id.includes('sync'),
+    pattern: /sync/,
   },
 ];

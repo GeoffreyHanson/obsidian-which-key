@@ -10,6 +10,7 @@ import {
   shuckCommands as shuckCommands,
   buildCommandTrie,
   curateCommands,
+  filterCommandsByIntent,
 } from './helpers';
 
 describe('Helper Functions', () => {
@@ -264,6 +265,71 @@ describe('Helper Functions', () => {
     });
   });
 
+  describe('filterCommandsByIntent', () => {
+    it('should filter commands based on pattern', () => {
+      const commands: ObsidianCommand[] = [
+        { id: 'search:find', name: 'Find', prefix: ['s', 'f'] },
+        { id: 'search:replace', name: 'Replace', prefix: ['s', 'r'] },
+        { id: 'file:open', name: 'Open File', prefix: ['f', 'o'] },
+      ];
+
+      const pattern = /search:/;
+
+      const result = filterCommandsByIntent(commands, pattern);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe('search:find');
+      expect(result[1].id).toBe('search:replace');
+    });
+
+    it('should handle complex patterns with negative lookahead', () => {
+      const commands: ObsidianCommand[] = [
+        { id: 'search:find', name: 'Find', prefix: ['s', 'f'] },
+        { id: 'search:bookmarks', name: 'Search Bookmarks', prefix: ['s', 'b'] },
+        { id: 'file:open', name: 'Open File', prefix: ['f', 'o'] },
+      ];
+
+      const pattern = /search:(?!.*bookmarks)/;
+
+      const result = filterCommandsByIntent(commands, pattern);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('search:find');
+    });
+
+    it('should handle patterns with multiple alternatives', () => {
+      const commands: ObsidianCommand[] = [
+        { id: 'file:open', name: 'Open File', prefix: ['f', 'o'] },
+        { id: 'template:insert', name: 'Insert Template', prefix: ['t', 'i'] },
+        { id: 'canvas:new', name: 'New Canvas', prefix: ['c', 'n'] },
+      ];
+
+      const pattern = /(?:file:|template:)(?!.*canvas)/;
+
+      const result = filterCommandsByIntent(commands, pattern);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe('file:open');
+      expect(result[1].id).toBe('template:insert');
+    });
+
+    it('should match patterns anywhere in command ID', () => {
+      const commands: ObsidianCommand[] = [
+        { id: 'core:toggle-link', name: 'Toggle Link', prefix: ['t', 'l'] },
+        { id: 'editor:follow-link', name: 'Follow Link', prefix: ['f', 'l'] },
+        { id: 'file:open', name: 'Open File', prefix: ['f', 'o'] },
+      ];
+
+      const pattern = /link/;
+
+      const result = filterCommandsByIntent(commands, pattern);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe('core:toggle-link');
+      expect(result[1].id).toBe('editor:follow-link');
+    });
+  });
+
   describe('curateCommands', () => {
     it('should curate commands and build trie', () => {
       const rawCommands = {
@@ -279,7 +345,7 @@ describe('Helper Functions', () => {
           prefix: ['s'],
           name: 'Search',
           icon: 'search',
-          commands: (id: string) => id.includes('search'),
+          pattern: /^search:/,
         },
       ];
 

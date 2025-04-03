@@ -20,7 +20,7 @@ export interface IntentMapping {
   name: string;
   id?: string;
   icon?: string;
-  commands: (id: string) => boolean;
+  pattern: RegExp;
 }
 
 export interface CuratedCommand extends ObsidianCommand {
@@ -163,16 +163,16 @@ export function shuckCommands(commands: Record<string, any>): ObsidianCommand[] 
 }
 
 /**
- * Filter commands based on intent mapping conditions
+ * Filter commands based on intent mapping pattern
  * @param commands - Array of commands to filter
- * @param condition - Function that determines if a command matches the intent
+ * @param pattern - RegExp pattern to match command IDs
  * @returns Array of filtered commands
  */
 export function filterCommandsByIntent(
   commands: ObsidianCommand[],
-  condition: (id: string) => boolean
+  pattern: RegExp
 ): ObsidianCommand[] {
-  return commands.filter(command => condition(command.id));
+  return commands.filter(command => pattern.test(command.id));
 }
 
 /**
@@ -212,18 +212,17 @@ export function curateCommands(
 
   const curatedCommands: CuratedCommand[] = [...topLevelMappings];
 
-  for (const { prefix, name, commands: condition, icon } of intentMappings) {
+  for (const { prefix, name, pattern, icon } of intentMappings) {
     // Push top level intent mappings
     curatedCommands.push({ prefix, name, icon, id: name } as CuratedCommand);
 
-    const bucket = filterCommandsByIntent(commandsToCurate, condition);
+    const bucket = filterCommandsByIntent(commandsToCurate, pattern);
 
     // Push array of commands with determined prefixes
     const commandsWithPrefixes = determinePrefixes(prefix, bucket);
     curatedCommands.push(
       ...commandsWithPrefixes.filter((cmd): cmd is CuratedCommand => cmd.prefix !== undefined)
     );
-    // curatedCommands.push(...determinePrefixes(prefix, bucket));
   }
 
   // Track curated command IDs
