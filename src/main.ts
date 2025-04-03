@@ -9,8 +9,8 @@ import {
   Setting,
 } from 'obsidian';
 import { EditorView, PluginValue, ViewPlugin, ViewUpdate } from '@codemirror/view';
-import { determinePrefixes } from 'utils/helpers';
-import { topLevelMappings, intentMappings } from 'utils/constants';
+import { determinePrefixes } from 'src/utils/helpers';
+import { topLevelMappings, intentMappings } from 'src/utils/constants';
 
 const { log } = console;
 
@@ -247,8 +247,6 @@ function curateCommands(commands) {
 
   const commandTrie = new CommandTrie();
   log('all commands:', commands);
-
-  // TODO: Support misc & plugin commands by generating ids
 
   const curatedCommands = [...topLevelMappings];
   for (const { prefix, name, commands: condition, icon } of intentMappings) {
