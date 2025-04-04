@@ -10,7 +10,7 @@ import {
 } from 'obsidian';
 import { EditorView, PluginValue, ViewPlugin, ViewUpdate } from '@codemirror/view';
 import { curateCommands } from 'src/utils/helpers';
-import { topLevelMappings, intentMappings } from './utils/constants';
+import { Keys, topLevelMappings, intentMappings } from './utils/constants';
 
 const { log } = console;
 
@@ -175,11 +175,11 @@ class CommandTrie {
     Object.entries(commands).forEach(([abvCommandName, command]) => {
       // const sequenceOptions = command.name.split(' ').map(word => word[0].toLowerCase());
       const primaryPrefixOptions = command.name
-        .split(' ')
+        .split(Keys.SPACE)
         .map(word => [word[0].toLowerCase(), word[0].toUpperCase()])
         .flat();
 
-      const secondaryPrefixOption = command.name.split(' ')[0].split('').slice(1);
+      const secondaryPrefixOption = command.name.split(Keys.SPACE)[0].split('').slice(1);
 
       const sequenceOptions = [...primaryPrefixOptions, ...secondaryPrefixOption];
 
@@ -344,7 +344,7 @@ class WhichKeyUI {
     const title = this.container.querySelector('.which-key-pressed');
     if (title) {
       // Join the keys with a space for display
-      title.textContent = `Key sequence: ${prefix ? prefix.join(' ') : 'Space'}`;
+      title.textContent = `Key sequence: ${prefix ? prefix.join(Keys.SPACE) : 'Space'}`;
     }
 
     const commandsEl = this.container.querySelector('.which-key-commands');
@@ -431,7 +431,7 @@ class SharedState {
   updateKeySequence(event: KeyboardEvent) {
     const { key } = event;
 
-    if (key === ' ' && !this.isRecording) {
+    if (key === Keys.SPACE && !this.isRecording) {
       this.isRecording = true;
       this.currentKeySequence = [];
 
@@ -494,7 +494,7 @@ class WhichKeyEditorPlugin implements PluginValue {
 
     // Ignore shift to allow capital letters for command categories
     // TODO: Ignore esc, backspace, etc.
-    if (key === 'Shift') {
+    if (key === Keys.SHIFT) {
       return;
     }
     // !!normalMode ?

@@ -1,12 +1,27 @@
+export const Keys = {
+  SPACE: ' ',
+  SHIFT: 'Shift',
+  CTRL: 'Control',
+  ALT: 'Alt',
+  META: 'Meta',
+  ENTER: 'Enter',
+  TAB: 'Tab',
+  ESCAPE: 'Escape',
+  BACKSPACE: 'Backspace',
+  FORWARD_SLASH: '/',
+  PIPE: '|',
+  DASH: '-',
+} as const;
+
 export const topLevelMappings = [
   {
-    prefix: [' '],
+    prefix: [Keys.SPACE],
     name: 'Open Quick Switcher',
     id: 'switcher:open',
     icon: 'square-chevron-right',
   },
   {
-    prefix: ['/'],
+    prefix: [Keys.FORWARD_SLASH],
     name: 'Open Global Search',
     id: 'global-search:open',
     icon: 'globe',
@@ -24,13 +39,13 @@ export const topLevelMappings = [
     icon: 'square-terminal',
   },
   {
-    prefix: ['|'],
+    prefix: [Keys.PIPE],
     name: 'Split right',
     id: 'workspace:split-vertical',
     icon: 'separator-vertical',
   },
   {
-    prefix: ['-'],
+    prefix: [Keys.DASH],
     name: 'Split down',
     id: 'workspace:split-horizontal',
     icon: 'separator-horizontal',
@@ -67,7 +82,7 @@ export const intentMappings = [
     pattern: /bookmarks/,
   },
   {
-    prefix: ['Tab'],
+    prefix: [Keys.TAB],
     name: 'Tab navigation',
     id: undefined,
     icon: 'arrow-right-to-line',
