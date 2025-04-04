@@ -9,13 +9,13 @@ import {
   Setting,
 } from 'obsidian';
 import { EditorView, PluginValue, ViewPlugin, ViewUpdate } from '@codemirror/view';
-import { categorizeCommands } from 'src/utils/helpers';
-import { Keys } from './utils/constants';
+import { categorizeCommands, curateCommands } from 'src/utils/helpers';
+import { Keys, topLevelMappings, intentMappings } from './utils/constants';
 
 const { log } = console;
 
-interface MyPluginSettings {
-  mySetting: string;
+interface WhichKeySettings {
+  categorizedCommands: boolean;
 }
 
 // Define types for the WhichKey mappings
@@ -50,9 +50,9 @@ interface CategorizedCommand {
   callback?: any;
 }
 
-// interface CategorizedCommands {
-//   [category: string]: Record<string, CategorizedCommand>;
-// }
+interface CategorizedCommands {
+  [category: string]: Record<string, CategorizedCommand>;
+}
 
 // Extend the App interface to include commands
 declare module 'obsidian' {
@@ -61,8 +61,8 @@ declare module 'obsidian' {
   }
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
-  mySetting: 'default',
+const DEFAULT_SETTINGS: WhichKeySettings = {
+  categorizedCommands: false,
 };
 
 class TrieNode {
@@ -445,7 +445,7 @@ export const codeMirrorPlugin = (keyManager: SharedState) => {
 };
 
 export default class WhichKey extends Plugin {
-  settings: MyPluginSettings;
+  settings: WhichKeySettings;
   sharedState: SharedState;
   commandTrie: CommandTrie;
 
@@ -456,8 +456,9 @@ export default class WhichKey extends Plugin {
     log(this.app);
 
     // Create the command trie
-    this.commandTrie = new CommandTrie();
-    this.commandTrie = categorizeCommands(this.app.commands.commands, this.commandTrie);
+    this.commandTrie = this.settings.categorizedCommands
+      ? categorizeCommands(this.app.commands.commands, CommandTrie)
+      : curateCommands(this.app.commands.commands, topLevelMappings, intentMappings, CommandTrie);
 
     // Initialize shared state with the command trie
     const ui = new WhichKeyUI(this.app);
@@ -504,8 +505,7 @@ export default class WhichKey extends Plugin {
       },
     });
 
-    // This adds a settings tab so the user can configure various aspects of the plugin
-    this.addSettingTab(new SampleSettingTab(this.app, this));
+    this.addSettingTab(new WhichKeySettingsTab(this.app, this));
 
     // When registering intervals, this function will automatically clear the interval when the plugin is disabled.
     this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
@@ -538,7 +538,7 @@ class SampleModal extends Modal {
   }
 }
 
-class SampleSettingTab extends PluginSettingTab {
+class WhichKeySettingsTab extends PluginSettingTab {
   plugin: WhichKey;
 
   constructor(app: App, plugin: WhichKey) {
@@ -552,16 +552,13 @@ class SampleSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     new Setting(containerEl)
-      .setName('Setting #1')
-      .setDesc("It's a secret")
-      .addText(text =>
-        text
-          .setPlaceholder('Enter your secret')
-          .setValue(this.plugin.settings.mySetting)
-          .onChange(async value => {
-            this.plugin.settings.mySetting = value;
-            await this.plugin.saveSettings();
-          })
+      .setName('Use Categorized Commands (experimental)')
+      .setDesc('Sort commands by category rather than by intent.')
+      .addToggle(toggle =>
+        toggle.setValue(this.plugin.settings.categorizedCommands).onChange(async value => {
+          this.plugin.settings.categorizedCommands = value;
+          await this.plugin.saveSettings();
+        })
       );
   }
 }

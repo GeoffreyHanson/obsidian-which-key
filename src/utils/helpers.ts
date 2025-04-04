@@ -207,6 +207,44 @@ export function buildCommandTrie(commands: CuratedCommand[], commandTrie: any): 
 }
 
 /**
+ * Curate commands by applying intent mappings and building a command trie
+ * @param commands - Raw commands from Obsidian
+ * @param topLevelMappings - Array of top-level command mappings
+ * @param intentMappings - Array of intent-based command mappings
+ * @param CommandTrie - CommandTrie class constructor
+ * @returns Populated CommandTrie instance
+ */
+export function curateCommands(
+  commands: Record<string, any>,
+  topLevelMappings: TopLevelMapping[],
+  intentMappings: IntentMapping[],
+  CommandTrie: any
+): any {
+  const commandTrie = new CommandTrie();
+  const commandsToCurate = shuckCommands(commands);
+  console.log('all commands:', commands);
+
+  const curatedCommands: CuratedCommand[] = [...topLevelMappings];
+
+  for (const { prefix, name, pattern, icon } of intentMappings) {
+    // Push top level intent mapping
+    curatedCommands.push({ prefix, name, icon } as CuratedCommand);
+
+    const bucket = filterCommandsByIntent(commandsToCurate, pattern);
+
+    // Push array of commands with determined prefixes
+    curatedCommands.push(...determinePrefixes(prefix, bucket));
+  }
+
+  // Track curated command IDs
+  const curatedIds = new Set(curatedCommands.map(command => command.id));
+  const remainingCommands = Object.entries(commands).filter(([id]) => !curatedIds.has(id));
+  console.log('remainingCommands', remainingCommands);
+
+  return buildCommandTrie(curatedCommands, commandTrie);
+}
+
+/**
  * Creates buckets of commands grouped by their category
  * @param commands - Commands from Obsidian
  * @returns Object of commands grouped by category
@@ -266,7 +304,8 @@ function assignCategoryPrefixes(sortedCategories: [string, ObsidianCommand[]][])
  * @param CommandTrie - CommandTrie class instance
  * @returns Populated CommandTrie instance
  */
-export function categorizeCommands(commands: Record<string, ObsidianCommand>, commandTrie) {
+export function categorizeCommands(commands: Record<string, ObsidianCommand>, CommandTrie: any) {
+  const commandTrie = new CommandTrie();
   // Group commands by category
   const categoryBuckets = createCategoryBuckets(commands);
 
