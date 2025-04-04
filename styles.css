@@ -2,6 +2,8 @@
     position: absolute;
     bottom: 35px;
     right: 10px;
+    max-height: 91%;
+    overflow-y: auto;
     background-color: var(--background-secondary);
     border-color: var(--modal-border-color);
     /* z-index: 100; */

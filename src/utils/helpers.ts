@@ -207,14 +207,14 @@ export function curateCommands(
   intentMappings: IntentMapping[],
   CommandTrie: any
 ): any {
-  const commandsToCurate = shuckCommands(commands);
   const commandTrie = new CommandTrie();
+  const commandsToCurate = shuckCommands(commands);
   console.log('all commands:', commands);
 
   const curatedCommands: CuratedCommand[] = [...topLevelMappings];
 
   for (const { prefix, name, pattern, icon } of intentMappings) {
-    // Push top level intent mappings
+    // Push top level intent mapping
     curatedCommands.push({ prefix, name, icon } as CuratedCommand);
 
     const bucket = filterCommandsByIntent(commandsToCurate, pattern);

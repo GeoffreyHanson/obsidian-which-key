@@ -9,7 +9,7 @@ import {
   Setting,
 } from 'obsidian';
 import { EditorView, PluginValue, ViewPlugin, ViewUpdate } from '@codemirror/view';
-import { curateCommands } from 'src/utils/helpers';
+import { buildCommandTrie, curateCommands, determinePrefixes } from 'src/utils/helpers';
 import { Keys, topLevelMappings, intentMappings } from './utils/constants';
 
 const { log } = console;
@@ -50,9 +50,9 @@ interface CategorizedCommand {
   callback?: any;
 }
 
-interface CategorizedCommands {
-  [category: string]: Record<string, CategorizedCommand>;
-}
+// interface CategorizedCommands {
+//   [category: string]: Record<string, CategorizedCommand>;
+// }
 
 // Extend the App interface to include commands
 declare module 'obsidian' {
@@ -131,7 +131,7 @@ class CommandTrie {
       }
     });
 
-    log('possible commands:', possibilities);
+    // log('possible commands:', possibilities);
     return possibilities;
   }
 
@@ -290,37 +290,53 @@ function categorizeCommands(commands) {
   const commandTrie = new CommandTrie();
   log('all commands:', commands);
 
-  const categorizedCommands: CategorizedCommands = {};
+  const categoryBuckets = {};
+  for (const command in commands) {
+    const [category] = command.split(':');
+    (categoryBuckets[category] = categoryBuckets[category] || []).push(commands[command]);
+  }
 
-  Object.entries(commands).forEach(([id, command]: [string, ObsidianCommand]) => {
-    const [category, subCommand] = id.split(':');
+  // Sort categories alphabetically
+  const sortedCategories = Object.entries(categoryBuckets).sort(([a], [b]) => a.localeCompare(b));
 
-    // If the category doesn't exist, create it
-    if (!categorizedCommands[category]) {
-      categorizedCommands[category] = {};
+  log('sortedCategories', sortedCategories);
+
+  const categoryMappings = {};
+  // For each category, try each prefix until assigned
+  for (const [category, commandBucket] of sortedCategories) {
+    // Derive prefix options
+    // First letters, lower and upper case
+    const firstLetterOptions = category
+      .split(Keys.DASH)
+      .flatMap(word => [word[0].toLowerCase(), word[0].toUpperCase()]);
+    // the remaining letters of the first word
+    const remainingLetters = category.split(Keys.DASH)[0].split('').slice(1);
+    const prefixOptions = [...firstLetterOptions, ...remainingLetters];
+
+    // Format with spaces and capitalize first letter
+    const formattedCategory = category.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase());
+
+    for (const prefix of prefixOptions) {
+      if (categoryMappings[prefix]) continue;
+      categoryMappings[prefix] = [formattedCategory, commandBucket];
+      break;
     }
+  }
+  log('categoryMappings', categoryMappings);
 
-    categorizedCommands[category][subCommand] = {
-      name: command.name,
-      id: command.id,
-      icon: command.icon ?? '',
-      hotkeys: command.hotkeys ?? [],
-      callback: command.callback || command.editorCallback || command.checkCallback,
-    };
-  });
+  const categorizedCommands = [];
+  for (const [prefix, values] of Object.entries(categoryMappings)) {
+    const prefixArray = [prefix];
+    const [category, commandBucket] = values;
 
-  // Sort categories based on number of commands
-  const sortedCommands = Object.entries(categorizedCommands).sort(
-    ([, a], [, b]) => Object.keys(b).length - Object.keys(a).length
-  );
-  // log('sortedCommands', sortedCommands);
+    // Push top level mapping
+    categorizedCommands.push({ prefix: prefixArray, name: category });
 
-  // Insert commands into the trie
-  sortedCommands.forEach(([category, relevantCommands]) => {
-    commandTrie.insertCommands(category, relevantCommands);
-  });
-
-  return commandTrie;
+    // Push commands with assigned prefixes
+    categorizedCommands.push(...determinePrefixes(prefixArray, commandBucket));
+  }
+  log(categorizeCommands);
+  return buildCommandTrie(categorizedCommands, commandTrie);
 }
 
 class WhichKeyUI {
@@ -497,7 +513,8 @@ class WhichKeyEditorPlugin implements PluginValue {
     if (key === Keys.SHIFT) {
       return;
     }
-    // !!normalMode ?
+
+    // TODO:!!normalMode ?
     if (!WhichKeyEditorPlugin.sharedState.insertMode) {
       WhichKeyEditorPlugin.sharedState.updateKeySequence(event);
     }
@@ -531,12 +548,13 @@ export default class WhichKey extends Plugin {
     log(this.app);
 
     // Create the command trie
-    this.commandTrie = curateCommands(
-      this.app.commands.commands,
-      topLevelMappings,
-      intentMappings,
-      CommandTrie
-    );
+    this.commandTrie = categorizeCommands(this.app.commands.commands);
+    // this.commandTrie = curateCommands(
+    //   this.app.commands.commands,
+    //   topLevelMappings,
+    //   intentMappings,
+    //   CommandTrie
+    // );
 
     // Initialize shared state with the command trie
     const ui = new WhichKeyUI(this.app);
