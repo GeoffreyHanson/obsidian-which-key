@@ -34,6 +34,19 @@ export interface TopLevelMapping {
   icon?: string;
 }
 
+interface CategoryBuckets {
+  [category: string]: ObsidianCommand[];
+}
+
+interface CategoryMapping {
+  formattedName: string;
+  commands: ObsidianCommand[];
+}
+
+interface CategoryMappings {
+  [prefix: string]: CategoryMapping;
+}
+
 /**
  * Extract first letters from command ID (after the colon and split by hyphens)
  * @param id - Command ID string
@@ -194,39 +207,91 @@ export function buildCommandTrie(commands: CuratedCommand[], commandTrie: any): 
 }
 
 /**
- * Curate commands by applying intent mappings and building a command trie
+ * Creates buckets of commands grouped by their category
+ * @param commands - Commands from Obsidian
+ * @returns Object of commands grouped by category
+ */
+function createCategoryBuckets(commands: Record<string, ObsidianCommand>): CategoryBuckets {
+  return Object.entries(commands).reduce((buckets: CategoryBuckets, [id, command]) => {
+    const [category] = id.split(':');
+    (buckets[category] = buckets[category] || []).push(command);
+    return buckets;
+  }, {});
+}
+
+/**
+ * Generates prefix options for a category
+ * @param category - Category name
+ * @returns Array of possible prefix characters
+ */
+function generatePrefixOptions(category: string): string[] {
+  const firstLetterOptions = category
+    .split('-')
+    .flatMap(word => [word[0].toLowerCase(), word[0].toUpperCase()]);
+  const remainingLetters = category.split('-')[0].split('').slice(1);
+  return [...firstLetterOptions, ...remainingLetters];
+}
+
+/**
+ * Assigns prefixes to categories
+ * @param sortedCategories - Array of category and command tuples
+ * @returns Object mapping prefixes to category names and command buckets
+ */
+function assignCategoryPrefixes(sortedCategories: [string, ObsidianCommand[]][]): CategoryMappings {
+  const categoryMappings: CategoryMappings = {};
+
+  for (const [category, commands] of sortedCategories) {
+    const prefixOptions = generatePrefixOptions(category);
+    const formattedName = category.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase());
+
+    // Find first available prefix
+    for (const prefix of prefixOptions) {
+      if (categoryMappings[prefix]) continue;
+
+      categoryMappings[prefix] = {
+        formattedName,
+        commands,
+      };
+
+      break;
+    }
+  }
+  log('categoryMappings', categoryMappings);
+  return categoryMappings;
+}
+
+/**
+ * Categorize commands and build command trie
  * @param commands - Raw commands from Obsidian
- * @param topLevelMappings - Array of top-level command mappings
- * @param intentMappings - Array of intent-based command mappings
- * @param CommandTrie - CommandTrie class constructor
+ * @param CommandTrie - CommandTrie class instance
  * @returns Populated CommandTrie instance
  */
-export function curateCommands(
-  commands: Record<string, any>,
-  topLevelMappings: TopLevelMapping[],
-  intentMappings: IntentMapping[],
-  CommandTrie: any
-): any {
-  const commandTrie = new CommandTrie();
-  const commandsToCurate = shuckCommands(commands);
-  console.log('all commands:', commands);
+export function categorizeCommands(commands: Record<string, ObsidianCommand>, commandTrie) {
+  // Group commands by category
+  const categoryBuckets = createCategoryBuckets(commands);
 
-  const curatedCommands: CuratedCommand[] = [...topLevelMappings];
+  // Sort categories alphabetically
+  const sortedCategories = Object.entries(categoryBuckets).sort(([a], [b]) => a.localeCompare(b));
 
-  for (const { prefix, name, pattern, icon } of intentMappings) {
-    // Push top level intent mapping
-    curatedCommands.push({ prefix, name, icon } as CuratedCommand);
+  // Assign prefixes for categories
+  const categoryMappings = assignCategoryPrefixes(sortedCategories);
 
-    const bucket = filterCommandsByIntent(commandsToCurate, pattern);
+  // Build command list for trie
+  const categorizedCommands: CuratedCommand[] = [];
 
-    // Push array of commands with determined prefixes
-    curatedCommands.push(...determinePrefixes(prefix, bucket));
+  for (const [prefix, { formattedName, commands }] of Object.entries(categoryMappings)) {
+    const prefixArray = [prefix];
+
+    // Add category command
+    categorizedCommands.push({
+      prefix: prefixArray,
+      name: formattedName,
+    });
+
+    // Add sub-commands with prefixes
+    // const commandsWithPrefixes = determinePrefixes(prefixArray, commands);
+    categorizedCommands.push(...determinePrefixes(prefixArray, commands));
   }
 
-  // Track curated command IDs
-  const curatedIds = new Set(curatedCommands.map(command => command.id));
-  const remainingCommands = Object.entries(commands).filter(([id]) => !curatedIds.has(id));
-  console.log('remainingCommands', remainingCommands);
-
-  return buildCommandTrie(curatedCommands, commandTrie);
+  return buildCommandTrie(categorizedCommands, commandTrie);
 }
