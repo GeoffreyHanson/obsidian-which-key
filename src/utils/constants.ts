@@ -43,14 +43,14 @@ export const intentMappings = [
     name: 'Search',
     id: undefined,
     icon: 'search',
-    pattern: /search:(?!.*bookmarks)/,
+    pattern: /^(?!.*bookmark).*search/,
   },
   {
     prefix: ['f'],
     name: 'File',
     id: undefined,
     icon: 'file',
-    pattern: /(?:file|attach|template)(?!.*canvas)/,
+    pattern: /^(?!.*canvas).*(file|attach|template)/,
   },
   {
     prefix: ['l'],
@@ -60,7 +60,7 @@ export const intentMappings = [
     pattern: /link/,
   },
   {
-    prefix: ['B'],
+    prefix: ['b'],
     name: 'Bookmarks',
     id: undefined,
     icon: 'bookmark',
@@ -71,8 +71,7 @@ export const intentMappings = [
     name: 'Tab navigation',
     id: undefined,
     icon: 'arrow-right-to-line',
-    pattern:
-      /(?:tab|focus|workspace:toggle-pin|workspace:close)(?!.*(?:table|bookmarks|file-explorer|window))/,
+    pattern: /(?!.*table).*tab/,
   },
   {
     prefix: ['v'],
@@ -163,7 +162,7 @@ export const intentMappings = [
     pattern: /graph(?!.*editor)/,
   },
   {
-    prefix: ['s'],
+    prefix: ['S'],
     name: 'Sync',
     id: undefined,
     icon: 'folder-sync',
