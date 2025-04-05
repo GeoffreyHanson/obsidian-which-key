@@ -411,10 +411,18 @@ class WhichKeyEditorPlugin implements PluginValue {
     view.dom.addEventListener('keydown', this.handleVimKeyPress, true);
   }
 
+  /**
+   * Handle key presses outside of vim's insert mode
+   * @param event - Keyboard event
+   */
   handleVimKeyPress = (event: KeyboardEvent) => {
     WhichKeyEditorPlugin.sharedState.updateKeySequence(event);
   };
 
+  /**
+   * Update the insert mode state
+   * @param update - View update
+   */
   update(update: ViewUpdate) {
     // @ts-expect-error, not typed
     const insertMode = update?.view?.cm?.state?.vim?.insertMode;
