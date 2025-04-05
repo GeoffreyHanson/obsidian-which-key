@@ -399,6 +399,7 @@ class SharedState {
  * This plugin intercepts key presses while in vim mode
  */
 class WhichKeyEditorPlugin implements PluginValue {
+  private app: App;
   private static sharedState: SharedState;
   private view: EditorView;
 
@@ -407,7 +408,8 @@ class WhichKeyEditorPlugin implements PluginValue {
   }
 
   // Event listener for vim mode
-  constructor(view: EditorView) {
+  constructor(app: App, view: EditorView) {
+    this.app = app;
     this.view = view;
     view.dom.addEventListener('keydown', this.handleVimKeyPress, true);
   }
@@ -422,8 +424,10 @@ class WhichKeyEditorPlugin implements PluginValue {
       return;
     }
 
-    // TODO:!!normalMode ?
-    if (!WhichKeyEditorPlugin.sharedState.insertMode) {
+    const editorInInsertMode = WhichKeyEditorPlugin.sharedState.insertMode;
+    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    const editorHasFocus = activeView?.editor.hasFocus();
+    if (!editorInInsertMode && editorHasFocus) {
       WhichKeyEditorPlugin.sharedState.updateKeySequence(event);
     }
   };
@@ -439,9 +443,20 @@ class WhichKeyEditorPlugin implements PluginValue {
   }
 }
 
-export const codeMirrorPlugin = (keyManager: SharedState) => {
+export const codeMirrorPlugin = (app: App, keyManager: SharedState) => {
   WhichKeyEditorPlugin.setKeyManager(keyManager);
-  return ViewPlugin.fromClass(WhichKeyEditorPlugin);
+  return ViewPlugin.fromClass(
+    class {
+      private plugin: WhichKeyEditorPlugin;
+      update: (update: ViewUpdate) => void;
+      destroy: () => void;
+      constructor(view: EditorView) {
+        this.plugin = new WhichKeyEditorPlugin(app, view);
+        this.update = this.plugin.update.bind(this.plugin);
+        this.destroy = this.plugin.destroy.bind(this.plugin);
+      }
+    }
+  );
 };
 
 export default class WhichKey extends Plugin {
@@ -464,7 +479,7 @@ export default class WhichKey extends Plugin {
     const ui = new WhichKeyUI(this.app);
     this.sharedState = new SharedState(this.app, this.commandTrie, ui);
 
-    this.registerEditorExtension(codeMirrorPlugin(this.sharedState));
+    this.registerEditorExtension(codeMirrorPlugin(this.app, this.sharedState));
 
     // This adds a simple command that can be triggered anywhere
     this.addCommand({
