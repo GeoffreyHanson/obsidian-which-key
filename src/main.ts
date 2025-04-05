@@ -328,22 +328,14 @@ class SharedState {
   private app: App;
   private isRecording = false;
   private currentKeySequence: string[] = [];
-  private _insertMode = false;
   private ui: WhichKeyUI;
+  insertMode = false;
   commandTrie: CommandTrie;
 
   constructor(app: App, commandTrie: CommandTrie, ui: WhichKeyUI) {
     this.app = app;
     this.commandTrie = commandTrie;
     this.ui = ui;
-  }
-
-  get insertMode(): boolean {
-    return this._insertMode;
-  }
-
-  set insertMode(value: boolean) {
-    this._insertMode = value;
   }
 
   interceptKeyPress = (event: KeyboardEvent) => {
@@ -354,6 +346,14 @@ class SharedState {
   // TODO: UI should be updated in editor plugin
   updateKeySequence(event: KeyboardEvent) {
     const { key } = event;
+    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    const editorHasFocus = activeView?.editor.hasFocus();
+
+    // Ignore key presses when editing the note title or when in vim's insert mode
+    if (!editorHasFocus || this.insertMode) return;
+
+    // Ignore shift to allow capital letters for command categories
+    if (key === Keys.SHIFT) return;
 
     if (key === Keys.SPACE && !this.isRecording) {
       this.isRecording = true;
@@ -399,7 +399,6 @@ class SharedState {
  * This plugin intercepts key presses while in vim mode
  */
 class WhichKeyEditorPlugin implements PluginValue {
-  private app: App;
   private static sharedState: SharedState;
   private view: EditorView;
 
@@ -407,29 +406,13 @@ class WhichKeyEditorPlugin implements PluginValue {
     WhichKeyEditorPlugin.sharedState = sharedState;
   }
 
-  // Event listener for vim mode
-  constructor(app: App, view: EditorView) {
-    this.app = app;
+  constructor(view: EditorView) {
     this.view = view;
     view.dom.addEventListener('keydown', this.handleVimKeyPress, true);
   }
 
-  // Only handle key presses when not in insert mode
   handleVimKeyPress = (event: KeyboardEvent) => {
-    const { key } = event;
-
-    // Ignore shift to allow capital letters for command categories
-    // TODO: Ignore esc, backspace, etc.
-    if (key === Keys.SHIFT) {
-      return;
-    }
-
-    const editorInInsertMode = WhichKeyEditorPlugin.sharedState.insertMode;
-    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-    const editorHasFocus = activeView?.editor.hasFocus();
-    if (!editorInInsertMode && editorHasFocus) {
-      WhichKeyEditorPlugin.sharedState.updateKeySequence(event);
-    }
+    WhichKeyEditorPlugin.sharedState.updateKeySequence(event);
   };
 
   update(update: ViewUpdate) {
@@ -443,20 +426,9 @@ class WhichKeyEditorPlugin implements PluginValue {
   }
 }
 
-export const codeMirrorPlugin = (app: App, keyManager: SharedState) => {
+export const codeMirrorPlugin = (keyManager: SharedState) => {
   WhichKeyEditorPlugin.setKeyManager(keyManager);
-  return ViewPlugin.fromClass(
-    class {
-      private plugin: WhichKeyEditorPlugin;
-      update: (update: ViewUpdate) => void;
-      destroy: () => void;
-      constructor(view: EditorView) {
-        this.plugin = new WhichKeyEditorPlugin(app, view);
-        this.update = this.plugin.update.bind(this.plugin);
-        this.destroy = this.plugin.destroy.bind(this.plugin);
-      }
-    }
-  );
+  return ViewPlugin.fromClass(WhichKeyEditorPlugin);
 };
 
 export default class WhichKey extends Plugin {
@@ -479,7 +451,7 @@ export default class WhichKey extends Plugin {
     const ui = new WhichKeyUI(this.app);
     this.sharedState = new SharedState(this.app, this.commandTrie, ui);
 
-    this.registerEditorExtension(codeMirrorPlugin(this.app, this.sharedState));
+    this.registerEditorExtension(codeMirrorPlugin(this.sharedState));
 
     // This adds a simple command that can be triggered anywhere
     this.addCommand({
@@ -567,7 +539,7 @@ class WhichKeySettingsTab extends PluginSettingTab {
     containerEl.empty();
 
     new Setting(containerEl)
-      .setName('Use Categorized Commands (experimental)')
+      .setName('Use Categorized Commands (Experimental)')
       .setDesc('Sort commands by category rather than by intent.')
       .addToggle(toggle =>
         toggle.setValue(this.plugin.settings.categorizedCommands).onChange(async value => {
