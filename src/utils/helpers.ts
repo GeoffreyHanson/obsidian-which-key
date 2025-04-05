@@ -249,7 +249,7 @@ export function curateCommands(
  * @param commands - Commands from Obsidian
  * @returns Object of commands grouped by category
  */
-function createCategoryBuckets(commands: Record<string, ObsidianCommand>): CategoryBuckets {
+export function createCategoryBuckets(commands: Record<string, ObsidianCommand>): CategoryBuckets {
   return Object.entries(commands).reduce((buckets: CategoryBuckets, [id, command]) => {
     const [category] = id.split(':');
     (buckets[category] = buckets[category] || []).push(command);
@@ -262,7 +262,7 @@ function createCategoryBuckets(commands: Record<string, ObsidianCommand>): Categ
  * @param category - Category name
  * @returns Array of possible prefix characters
  */
-function generatePrefixOptions(category: string): string[] {
+export function generateCategoryPrefixOptions(category: string): string[] {
   const firstLetterOptions = category
     .split('-')
     .flatMap(word => [word[0].toLowerCase(), word[0].toUpperCase()]);
@@ -275,11 +275,13 @@ function generatePrefixOptions(category: string): string[] {
  * @param sortedCategories - Array of category and command tuples
  * @returns Object mapping prefixes to category names and command buckets
  */
-function assignCategoryPrefixes(sortedCategories: [string, ObsidianCommand[]][]): CategoryMappings {
+export function assignCategoryPrefixes(
+  sortedCategories: [string, ObsidianCommand[]][]
+): CategoryMappings {
   const categoryMappings: CategoryMappings = {};
 
   for (const [category, commands] of sortedCategories) {
-    const prefixOptions = generatePrefixOptions(category);
+    const prefixOptions = generateCategoryPrefixOptions(category);
     const formattedName = category.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase());
 
     // Find first available prefix

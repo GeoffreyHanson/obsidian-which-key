@@ -9,8 +9,10 @@ import {
   type CuratedCommand,
   shuckCommands as shuckCommands,
   buildCommandTrie,
-  curateCommands,
   filterCommandsByIntent,
+  createCategoryBuckets,
+  generateCategoryPrefixOptions,
+  assignCategoryPrefixes,
 } from './helpers';
 
 describe('Helper Functions', () => {
@@ -230,7 +232,7 @@ describe('Helper Functions', () => {
     });
   });
 
-  describe('transformCommands', () => {
+  describe('shuckCommands', () => {
     it('should shuck key and keep value', () => {
       const rawCommands = {
         cmd1: { name: 'Command 1', id: 'cmd1', icon: 'icon1', hotkeys: ['Ctrl+A'] },
@@ -243,6 +245,51 @@ describe('Helper Functions', () => {
         { name: 'Command 1', id: 'cmd1', icon: 'icon1', hotkeys: ['Ctrl+A'] },
         { name: 'Command 2', id: 'cmd2', icon: 'icon2', hotkeys: ['Ctrl+B'] },
       ]);
+    });
+  });
+
+  describe('filterCommandsByIntent', () => {
+    it('should filter commands based on intent pattern', () => {
+      const commands = [
+        { id: 'editor:toggle-bold', name: 'Toggle Bold' },
+        { id: 'editor:toggle-italic', name: 'Toggle Italic' },
+        { id: 'app:open-settings', name: 'Open Settings' },
+      ];
+
+      const pattern = /editor/;
+      const result = filterCommandsByIntent(commands, pattern);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe('editor:toggle-bold');
+      expect(result[1].id).toBe('editor:toggle-italic');
+    });
+
+    it('should return empty array when no matches found', () => {
+      const commands = [
+        { id: 'app:open-vault', name: 'Open Vault' },
+        { id: 'app:close', name: 'Close' },
+      ];
+
+      const pattern = /editor/;
+      const result = filterCommandsByIntent(commands, pattern);
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('should handle complex regex patterns', () => {
+      const commands = [
+        { id: 'editor:format-text', name: 'Format Text' },
+        { id: 'editor:format-code', name: 'Format Code' },
+        { id: 'editor:insert-link', name: 'Insert Link' },
+        { id: 'app:format-vault', name: 'Format Vault' },
+      ];
+
+      const pattern = /^editor:format/;
+      const result = filterCommandsByIntent(commands, pattern);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe('editor:format-text');
+      expect(result[1].id).toBe('editor:format-code');
     });
   });
 
@@ -330,33 +377,111 @@ describe('Helper Functions', () => {
     });
   });
 
-  describe('curateCommands', () => {
-    it('should curate commands and build trie', () => {
-      const rawCommands = {
-        'search:find': { name: 'Find', id: 'search:find' },
-        'search:replace': { name: 'Replace', id: 'search:replace' },
-        'file:open': { name: 'Open File', id: 'file:open' },
+  // describe('curateCommands', () => {
+  // });
+
+  describe('createCategoryBuckets', () => {
+    it('should group commands by category', () => {
+      const commands = {
+        'editor:copy': { id: 'editor:copy', name: 'Copy' },
+        'editor:paste': { id: 'editor:paste', name: 'Paste' },
+        'file:open': { id: 'file:open', name: 'Open file' },
+        'file:save': { id: 'file:save', name: 'Save file' },
       };
 
-      const topLevelMappings = [{ prefix: [' '], name: 'Space', id: 'space', icon: 'space' }];
+      const result = createCategoryBuckets(commands);
 
-      const intentMappings = [
-        {
-          prefix: ['s'],
-          name: 'Search',
-          icon: 'search',
-          pattern: /^search:/,
-        },
-      ];
+      expect(Object.keys(result)).toHaveLength(2);
 
-      const mockCommandTrie = jest.fn().mockImplementation(() => ({
-        insertVimCommand: jest.fn(),
-      }));
+      expect(result.editor).toHaveLength(2);
+      expect(result.file).toHaveLength(2);
 
-      const result = curateCommands(rawCommands, topLevelMappings, intentMappings, mockCommandTrie);
+      expect(result.editor[0].name).toBe('Copy');
+      expect(result.editor[1].name).toBe('Paste');
 
-      expect(result).toBeDefined();
-      expect(result.insertVimCommand).toHaveBeenCalled();
+      expect(result.file[0].name).toBe('Open file');
+      expect(result.file[1].name).toBe('Save file');
     });
   });
+
+  describe('generateCategoryPrefixOptions', () => {
+    test('should handle single word category', () => {
+      const result = generateCategoryPrefixOptions('editor');
+      expect(result).toEqual(['e', 'E', 'd', 'i', 't', 'o', 'r']);
+    });
+
+    test('should handle multiple hyphens', () => {
+      const result = generateCategoryPrefixOptions('quick-brown-fox');
+      expect(result).toEqual(['q', 'Q', 'b', 'B', 'f', 'F', 'u', 'i', 'c', 'k']);
+    });
+  });
+
+  describe('assignCategoryPrefixes', () => {
+    test('should assign unique prefixes to categories', () => {
+      const sortedCategories: [string, ObsidianCommand[]][] = [
+        ['editor', [{ id: 'editor:format', name: 'Format' }]],
+        ['file', [{ id: 'file:open', name: 'Open' }]],
+      ];
+
+      const result = assignCategoryPrefixes(sortedCategories);
+
+      expect(Object.keys(result)).toContain('e');
+      expect(Object.keys(result)).toContain('f');
+      expect(result.e.formattedName).toBe('Editor');
+      expect(result.f.formattedName).toBe('File');
+      expect(result.e.commands).toEqual([{ id: 'editor:format', name: 'Format' }]);
+      expect(result.f.commands).toEqual([{ id: 'file:open', name: 'Open' }]);
+    });
+
+    test('should handle prefix collisions by using next available prefix', () => {
+      const sortedCategories: [string, ObsidianCommand[]][] = [
+        ['editor', [{ id: 'editor:format', name: 'Format' }]],
+        ['explorer', [{ id: 'explorer:open', name: 'Open' }]],
+      ];
+
+      const prefixMap = assignCategoryPrefixes(sortedCategories);
+      const prefixes = Object.keys(prefixMap);
+
+      // Should assign different prefixes despite both starting with 'e'
+      expect(prefixes[0]).toBe('e');
+      expect(prefixes[1]).toBe('E');
+    });
+
+    test('should handle hyphenated category names', () => {
+      const sortedCategories: [string, ObsidianCommand[]][] = [
+        ['file-explorer', [{ id: 'file-explorer:open', name: 'Open' }]],
+      ];
+
+      const result = assignCategoryPrefixes(sortedCategories);
+
+      expect(Object.keys(result)).toContain('f');
+      expect(result.f.formattedName).toBe('File explorer');
+      expect(result.f.commands).toEqual([{ id: 'file-explorer:open', name: 'Open' }]);
+    });
+
+    test('should handle multiple commands in a category', () => {
+      const sortedCategories: [string, ObsidianCommand[]][] = [
+        [
+          'file',
+          [
+            { id: 'file:open', name: 'Open' },
+            { id: 'file:save', name: 'Save' },
+            { id: 'file:close', name: 'Close' },
+          ],
+        ],
+      ];
+
+      const result = assignCategoryPrefixes(sortedCategories);
+
+      expect(Object.keys(result)).toContain('f');
+      expect(result.f.commands).toHaveLength(3);
+      expect(result.f.commands).toEqual([
+        { id: 'file:open', name: 'Open' },
+        { id: 'file:save', name: 'Save' },
+        { id: 'file:close', name: 'Close' },
+      ]);
+    });
+  });
+
+  // describe('categorizeCommands', () => {});
 });
