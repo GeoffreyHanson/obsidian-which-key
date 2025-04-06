@@ -175,7 +175,7 @@ export function determinePrefixes(
 }
 
 /**
- * Transform raw commands into a standardized format
+ * Remove keys from command object
  * @param commands - Raw commands object from Obsidian
  * @returns Array of standardized commands
  */
@@ -241,12 +241,15 @@ export function curateCommands(
 
   for (const { prefix, name, pattern, icon } of intentMappings) {
     // Push top level intent mapping
-    curatedCommands.push({ prefix, name, icon } as CuratedCommand);
+    // curatedCommands.push({ prefix, name, icon } as CuratedCommand);
 
     const bucket = filterCommandsByIntent(commandsToCurate, pattern);
 
-    // Push array of commands with determined prefixes
-    curatedCommands.push(...determinePrefixes(prefix, bucket));
+    if (bucket.length > 0) {
+      curatedCommands.push({ prefix, name, icon } as CuratedCommand);
+      // Push array of commands with determined prefixes
+      curatedCommands.push(...determinePrefixes(prefix, bucket));
+    }
   }
 
   // Track curated command IDs

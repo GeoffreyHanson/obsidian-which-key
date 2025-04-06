@@ -18,6 +18,9 @@ import {
 } from './helpers';
 import { obsidianCommands } from '../__fixtures__/obsidian-commands';
 import { intentMappings, topLevelMappings } from '../utils/constants';
+import { patterns } from '../utils/constants';
+
+const commandsWithoutIds = shuckCommands(obsidianCommands);
 
 describe('Helper Functions', () => {
   describe('extractIdFirstLetters', () => {
@@ -295,6 +298,76 @@ describe('Helper Functions', () => {
       expect(result[0].id).toBe('editor:format-text');
       expect(result[1].id).toBe('editor:format-code');
     });
+
+    // Filter intent patterns
+    it('should filter canvas commands', () => {
+      const commandIdsToMatch = [
+        'canvas:convert-to-file',
+        'canvas:export-as-image',
+        'canvas:jump-to-group',
+        'canvas:new-file',
+      ];
+
+      const filteredIds = filterCommandsByIntent(commandsWithoutIds, patterns.c).map(
+        command => command.id
+      );
+
+      expect(filteredIds.length).toBe(commandIdsToMatch.length);
+      commandIdsToMatch.forEach(id => {
+        expect(filteredIds).toContain(id);
+      });
+    });
+
+    it('should filter graph commands', () => {
+      const commandIdsToMatch = ['graph:animate', 'graph:open', 'graph:open-local'];
+
+      const filteredIds = filterCommandsByIntent(commandsWithoutIds, patterns.g).map(
+        command => command.id
+      );
+
+      expect(filteredIds.length).toBe(commandIdsToMatch.length);
+      commandIdsToMatch.forEach(id => {
+        expect(filteredIds).toContain(id);
+      });
+    });
+
+    it('should filter search commands', () => {
+      const commandIdsToMatch = [
+        'editor:open-search',
+        'editor:open-search-replace',
+        'global-search:open',
+        'switcher:open',
+        'command-palette:open',
+        'webviewer:search',
+      ];
+
+      const filteredIds = filterCommandsByIntent(commandsWithoutIds, patterns.s).map(
+        command => command.id
+      );
+
+      expect(filteredIds.length).toBe(commandIdsToMatch.length);
+      commandIdsToMatch.forEach(id => {
+        expect(filteredIds).toContain(id);
+      });
+    });
+
+    it('should filter sync commands', () => {
+      const commandIdsToMatch = [
+        'sync:open-sync-log',
+        'sync:open-sync-view',
+        'sync:setup',
+        'sync:view-version-history',
+      ];
+
+      const filteredIds = filterCommandsByIntent(commandsWithoutIds, patterns.S).map(
+        command => command.id
+      );
+
+      expect(filteredIds.length).toBe(commandIdsToMatch.length);
+      commandIdsToMatch.forEach(id => {
+        expect(filteredIds).toContain(id);
+      });
+    });
   });
 
   describe('buildCommandTrie', () => {
@@ -313,71 +386,6 @@ describe('Helper Functions', () => {
       expect(mockTrie.insertVimCommand).toHaveBeenCalledTimes(2);
       expect(mockTrie.insertVimCommand).toHaveBeenCalledWith(commands[0]);
       expect(mockTrie.insertVimCommand).toHaveBeenCalledWith(commands[1]);
-    });
-  });
-
-  describe('filterCommandsByIntent', () => {
-    it('should filter commands based on pattern', () => {
-      const commands: ObsidianCommand[] = [
-        { id: 'search:find', name: 'Find', prefix: ['s', 'f'] },
-        { id: 'search:replace', name: 'Replace', prefix: ['s', 'r'] },
-        { id: 'file:open', name: 'Open File', prefix: ['f', 'o'] },
-      ];
-
-      const pattern = /search:/;
-
-      const result = filterCommandsByIntent(commands, pattern);
-
-      expect(result).toHaveLength(2);
-      expect(result[0].id).toBe('search:find');
-      expect(result[1].id).toBe('search:replace');
-    });
-
-    it('should handle complex patterns with negative lookahead', () => {
-      const commands: ObsidianCommand[] = [
-        { id: 'search:find', name: 'Find', prefix: ['s', 'f'] },
-        { id: 'search:bookmarks', name: 'Search Bookmarks', prefix: ['s', 'b'] },
-        { id: 'file:open', name: 'Open File', prefix: ['f', 'o'] },
-      ];
-
-      const pattern = /search:(?!.*bookmarks)/;
-
-      const result = filterCommandsByIntent(commands, pattern);
-
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('search:find');
-    });
-
-    it('should handle patterns with multiple alternatives', () => {
-      const commands: ObsidianCommand[] = [
-        { id: 'file:open', name: 'Open File', prefix: ['f', 'o'] },
-        { id: 'template:insert', name: 'Insert Template', prefix: ['t', 'i'] },
-        { id: 'canvas:new', name: 'New Canvas', prefix: ['c', 'n'] },
-      ];
-
-      const pattern = /(?:file:|template:)(?!.*canvas)/;
-
-      const result = filterCommandsByIntent(commands, pattern);
-
-      expect(result).toHaveLength(2);
-      expect(result[0].id).toBe('file:open');
-      expect(result[1].id).toBe('template:insert');
-    });
-
-    it('should match patterns anywhere in command ID', () => {
-      const commands: ObsidianCommand[] = [
-        { id: 'core:toggle-link', name: 'Toggle Link', prefix: ['t', 'l'] },
-        { id: 'editor:follow-link', name: 'Follow Link', prefix: ['f', 'l'] },
-        { id: 'file:open', name: 'Open File', prefix: ['f', 'o'] },
-      ];
-
-      const pattern = /link/;
-
-      const result = filterCommandsByIntent(commands, pattern);
-
-      expect(result).toHaveLength(2);
-      expect(result[0].id).toBe('core:toggle-link');
-      expect(result[1].id).toBe('editor:follow-link');
     });
   });
 
