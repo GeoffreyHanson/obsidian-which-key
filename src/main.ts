@@ -338,6 +338,11 @@ class SharedState {
     this.ui = ui;
   }
 
+  private resetState() {
+    this.isRecording = false;
+    this.currentKeySequence = [];
+  }
+
   interceptKeyPress = (event: KeyboardEvent) => {
     event.preventDefault();
     event.stopPropagation();
@@ -387,11 +392,6 @@ class SharedState {
       // No possible completions, reset
       this.resetState();
     }
-  }
-
-  private resetState() {
-    this.isRecording = false;
-    this.currentKeySequence = [];
   }
 }
 

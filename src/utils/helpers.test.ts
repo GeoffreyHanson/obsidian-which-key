@@ -543,5 +543,41 @@ describe('Helper Functions', () => {
         expect(cmd.prefix.length).toBeGreaterThan(0);
       });
     });
+
+    it('should assign prefixes to all commands within each category', () => {
+      const result = categorizeCommands(obsidianCommands, MockCommandTrie);
+
+      // Group commands by their top-level category prefix
+      const commandsByCategory = new Map<string, CuratedCommand[]>();
+      result.commands.forEach((cmd: CuratedCommand) => {
+        if (!cmd.prefix || cmd.prefix.length === 0) return;
+        const categoryPrefix = cmd.prefix[0];
+        if (!commandsByCategory.has(categoryPrefix)) {
+          commandsByCategory.set(categoryPrefix, []);
+        }
+        commandsByCategory.get(categoryPrefix)?.push(cmd);
+      });
+
+      // For each category, verify all commands have complete prefixes
+      commandsByCategory.forEach((commands, categoryPrefix) => {
+        // Category should have at least one command
+        expect(commands.length).toBeGreaterThan(0);
+
+        // All commands in category should have a complete prefix (length 2)
+        const unassignedCommands = commands.filter(cmd => !cmd.prefix || cmd.prefix.length !== 2);
+        if (unassignedCommands.length > 0) {
+          console.log(
+            `Category ${categoryPrefix} has commands without complete prefixes:`,
+            unassignedCommands.map(cmd => cmd.name)
+          );
+        }
+        expect(unassignedCommands.length).toBe(0);
+
+        // All commands should have the category prefix as their first prefix
+        commands.forEach(cmd => {
+          expect(cmd.prefix[0]).toBe(categoryPrefix);
+        });
+      });
+    });
   });
 });

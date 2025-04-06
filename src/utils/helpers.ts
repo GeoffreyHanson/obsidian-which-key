@@ -323,6 +323,7 @@ export function assignCategoryPrefixes(
  * @returns Populated CommandTrie instance
  */
 export function categorizeCommands(commands: Record<string, ObsidianCommand>, CommandTrie: any) {
+  log('all commands', commands);
   const commandTrie = new CommandTrie();
   // Group commands by category
   const categoryBuckets = createCategoryBuckets(commands);
