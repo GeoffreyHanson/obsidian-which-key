@@ -142,6 +142,7 @@ export function determinePrefixes(
   const possiblePrefixes = commands.map(command => {
     const { id, name } = command;
 
+    // TODO: Prioritize name letters
     // Get candidate letters from the command's ID and name; deduplicate
     const firstLetters = new Set([...extractIdFirstLetters(id), ...extractNameFirstLetters(name)]);
 

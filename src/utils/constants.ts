@@ -58,14 +58,14 @@ export const intentMappings = [
     name: 'Search',
     id: undefined,
     icon: 'search',
-    pattern: /^(?!.*bookmark).*search/,
+    pattern: /^(?!.*bookmark).*(search|switcher|command-palette)/,
   },
   {
     prefix: ['f'],
     name: 'File',
     id: undefined,
     icon: 'file',
-    pattern: /^(?!.*canvas).*(file|attach|template)/,
+    pattern: /^(?!.*canvas).*(file|attach|template|properties|zk-prefixer)/,
   },
   {
     prefix: ['l'],
@@ -86,7 +86,7 @@ export const intentMappings = [
     name: 'Tab navigation',
     id: undefined,
     icon: 'arrow-right-to-line',
-    pattern: /(?!.*table).*tab/,
+    pattern: /^(?!.*(table|tag)).*(tab|pane|pin|workspace:close|editor:focus)/,
   },
   {
     prefix: ['v'],
@@ -101,7 +101,8 @@ export const intentMappings = [
     id: undefined,
     icon: 'text',
     pattern:
-      /(?:editor:toggle|heading|clear-formatting|cycle-list-checklist|swap-line|add-cursor|delete-paragraph|context-menu|fold(?!.*file))/,
+      /(?=.*editor)(?=.*toggle)|heading|clear-formatting|cycle-list-checklist|swap-line|add-cursor|delete-paragraph|context-menu|fold|formatting/,
+    // /(?:editor:toggle|heading|clear-formatting|cycle-list-checklist|swap-line|add-cursor|delete-paragraph|context-menu|fold(?!.*file))/,
   },
   {
     prefix: ['T'],
@@ -129,7 +130,7 @@ export const intentMappings = [
     name: 'Windows',
     id: undefined,
     icon: 'app-window',
-    pattern: /window/,
+    pattern: /(?:window|workspaces|sidebar|split)/,
   },
   {
     prefix: ['u'],
@@ -144,7 +145,7 @@ export const intentMappings = [
     id: undefined,
     icon: 'dock',
     pattern:
-      /(?:app(?!.*(?:vault|go))|export(?!.*canvas)|workspace:(?:show-trash|copy)|editor:focus|tag-pane|outline)/,
+      /(?:app(?!.*(?:vault|go))|export(?!.*canvas)|workspace:(?:show-trash|copy)|editor:focus|tag-pane|outline|random-note|slides|audio-recorder)/,
   },
   {
     prefix: ['i'],
@@ -155,6 +156,7 @@ export const intentMappings = [
   },
 
   // Core Plugins
+  // TODO: These need to be conditionally shown if the patter matches
   {
     prefix: ['c'],
     name: 'Canvas',
@@ -182,5 +184,19 @@ export const intentMappings = [
     id: undefined,
     icon: 'folder-sync',
     pattern: /sync/,
+  },
+  {
+    prefix: ['W'],
+    name: 'Webviewer',
+    id: undefined,
+    icon: 'globe',
+    pattern: /webviewer/,
+  },
+  {
+    prefix: ['M'],
+    name: 'Miscellaneous',
+    id: undefined,
+    icon: 'circle-help',
+    pattern: /.*/,
   },
 ];

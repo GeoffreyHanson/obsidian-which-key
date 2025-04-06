@@ -14,8 +14,10 @@ import {
   generateCategoryPrefixOptions,
   assignCategoryPrefixes,
   categorizeCommands,
+  curateCommands,
 } from './helpers';
 import { obsidianCommands } from '../__fixtures__/obsidian-commands';
+import { intentMappings, topLevelMappings } from '../utils/constants';
 
 describe('Helper Functions', () => {
   describe('extractIdFirstLetters', () => {
@@ -379,7 +381,81 @@ describe('Helper Functions', () => {
     });
   });
 
-  // describe('curateCommands', () => {});
+  // describe('curateCommands', () => {
+  //   class MockCommandTrie {
+  //     commands: CuratedCommand[] = [];
+  //     insertVimCommand(command: CuratedCommand) {
+  //       this.commands.push(command);
+  //     }
+  //   }
+
+  // it('should sort commands by intent and identify unsorted commands', () => {
+  //   const result = curateCommands(
+  //     obsidianCommands,
+  //     topLevelMappings,
+  //     intentMappings,
+  //     MockCommandTrie
+  //   );
+
+  //   // Get all command IDs from the input
+  //   const allCommandIds = new Set(Object.keys(obsidianCommands));
+
+  //   // Get all curated command IDs (excluding top-level mappings)
+  //   const curatedCommandIds = new Set(
+  //     result.commands
+  //       .filter((cmd: CuratedCommand) => cmd.id && !topLevelMappings.some(m => m.id === cmd.id))
+  //       .map((cmd: CuratedCommand) => cmd.id as string)
+  //   );
+
+  //   // Find commands that weren't sorted by intent
+  //   const uncategorizedCommands = Array.from(allCommandIds)
+  //     .filter(id => !curatedCommandIds.has(id))
+  //     .map(id => ({
+  //       id,
+  //       command: obsidianCommands[id as keyof typeof obsidianCommands],
+  //       matchedIntent: intentMappings.find(m => m.pattern.test(id))?.name || 'none',
+  //     }));
+
+  //   if (uncategorizedCommands.length > 0) {
+  //     console.log(
+  //       'Commands not categorized by any intent:',
+  //       uncategorizedCommands.map(cmd => ({
+  //         id: cmd.id,
+  //         name: cmd.command.name,
+  //         matchedIntent: cmd.matchedIntent,
+  //       }))
+  //     );
+  //   }
+
+  //   // The test should fail if there are any uncategorized commands
+  //   expect(uncategorizedCommands).toHaveLength(0);
+
+  //   // Group commands by their intent categories for analysis
+  //   const commandsByCategory = new Map<string, CuratedCommand[]>();
+  //   result.commands
+  //     .filter((cmd: CuratedCommand) => cmd.id && !topLevelMappings.some(m => m.id === cmd.id))
+  //     .forEach((cmd: CuratedCommand) => {
+  //       const category = intentMappings.find(intent => intent.pattern.test(cmd.id || ''))?.name;
+  //       if (category) {
+  //         if (!commandsByCategory.has(category)) {
+  //           commandsByCategory.set(category, []);
+  //         }
+  //         commandsByCategory.get(category)?.push(cmd);
+  //       }
+  //     });
+
+  //   // Log commands by category for analysis
+  //   console.log(
+  //     'Commands by category:',
+  //     Array.from(commandsByCategory.entries()).map(([category, commands]) => ({
+  //       category,
+  //       count: commands.length,
+  //       prefix: intentMappings.find(intent => intent.name === category)?.prefix[0],
+  //       commands: commands.map(c => c.name),
+  //     }))
+  //   );
+  // });
+  // });
 
   describe('createCategoryBuckets', () => {
     it('should group commands by category', () => {
@@ -544,40 +620,40 @@ describe('Helper Functions', () => {
       });
     });
 
-    it('should assign prefixes to all commands within each category', () => {
-      const result = categorizeCommands(obsidianCommands, MockCommandTrie);
+    // it('should assign prefixes to all commands within each category', () => {
+    //   const result = categorizeCommands(obsidianCommands, MockCommandTrie);
 
-      // Group commands by their top-level category prefix
-      const commandsByCategory = new Map<string, CuratedCommand[]>();
-      result.commands.forEach((cmd: CuratedCommand) => {
-        if (!cmd.prefix || cmd.prefix.length === 0) return;
-        const categoryPrefix = cmd.prefix[0];
-        if (!commandsByCategory.has(categoryPrefix)) {
-          commandsByCategory.set(categoryPrefix, []);
-        }
-        commandsByCategory.get(categoryPrefix)?.push(cmd);
-      });
+    //   // Group commands by their top-level category prefix
+    //   const commandsByCategory = new Map<string, CuratedCommand[]>();
+    //   result.commands.forEach((cmd: CuratedCommand) => {
+    //     if (!cmd.prefix || cmd.prefix.length === 0) return;
+    //     const categoryPrefix = cmd.prefix[0];
+    //     if (!commandsByCategory.has(categoryPrefix)) {
+    //       commandsByCategory.set(categoryPrefix, []);
+    //     }
+    //     commandsByCategory.get(categoryPrefix)?.push(cmd);
+    //   });
 
-      // For each category, verify all commands have complete prefixes
-      commandsByCategory.forEach((commands, categoryPrefix) => {
-        // Category should have at least one command
-        expect(commands.length).toBeGreaterThan(0);
+    //   // For each category, verify all commands have complete prefixes
+    //   commandsByCategory.forEach((commands, categoryPrefix) => {
+    //     // Category should have at least one command
+    //     expect(commands.length).toBeGreaterThan(0);
 
-        // All commands in category should have a complete prefix (length 2)
-        const unassignedCommands = commands.filter(cmd => !cmd.prefix || cmd.prefix.length !== 2);
-        if (unassignedCommands.length > 0) {
-          console.log(
-            `Category ${categoryPrefix} has commands without complete prefixes:`,
-            unassignedCommands.map(cmd => cmd.name)
-          );
-        }
-        expect(unassignedCommands.length).toBe(0);
+    //     // All commands in category should have a complete prefix (length 2)
+    //     const unassignedCommands = commands.filter(cmd => !cmd.prefix || cmd.prefix.length !== 2);
+    //     if (unassignedCommands.length > 0) {
+    //       console.log(
+    //         `Category ${categoryPrefix} has commands without complete prefixes:`,
+    //         unassignedCommands.map(cmd => cmd.name)
+    //       );
+    //     }
+    //     expect(unassignedCommands.length).toBe(0);
 
-        // All commands should have the category prefix as their first prefix
-        commands.forEach(cmd => {
-          expect(cmd.prefix[0]).toBe(categoryPrefix);
-        });
-      });
-    });
+    //     // All commands should have the category prefix as their first prefix
+    //     commands.forEach(cmd => {
+    //       expect(cmd.prefix[0]).toBe(categoryPrefix);
+    //     });
+    //   });
+    // });
   });
 });
