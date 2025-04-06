@@ -13,7 +13,9 @@ import {
   createCategoryBuckets,
   generateCategoryPrefixOptions,
   assignCategoryPrefixes,
+  categorizeCommands,
 } from './helpers';
+import { obsidianCommands } from '../__fixtures__/obsidian-commands';
 
 describe('Helper Functions', () => {
   describe('extractIdFirstLetters', () => {
@@ -377,8 +379,7 @@ describe('Helper Functions', () => {
     });
   });
 
-  // describe('curateCommands', () => {
-  // });
+  // describe('curateCommands', () => {});
 
   describe('createCategoryBuckets', () => {
     it('should group commands by category', () => {
@@ -407,12 +408,27 @@ describe('Helper Functions', () => {
   describe('generateCategoryPrefixOptions', () => {
     test('should handle single word category', () => {
       const result = generateCategoryPrefixOptions('editor');
-      expect(result).toEqual(['e', 'E', 'd', 'i', 't', 'o', 'r']);
+      expect(result).toEqual(['e', 'E', 'd', 'D', 'i', 'I', 't', 'T', 'o', 'O', 'r', 'R']);
     });
 
     test('should handle multiple hyphens', () => {
       const result = generateCategoryPrefixOptions('quick-brown-fox');
-      expect(result).toEqual(['q', 'Q', 'b', 'B', 'f', 'F', 'u', 'i', 'c', 'k']);
+      expect(result).toEqual([
+        'q',
+        'Q',
+        'b',
+        'B',
+        'f',
+        'F',
+        'u',
+        'U',
+        'i',
+        'I',
+        'c',
+        'C',
+        'k',
+        'K',
+      ]);
     });
   });
 
@@ -483,5 +499,49 @@ describe('Helper Functions', () => {
     });
   });
 
-  // describe('categorizeCommands', () => {});
+  describe('categorizeCommands', () => {
+    class MockCommandTrie {
+      commands: CuratedCommand[] = [];
+      insertVimCommand(command: CuratedCommand) {
+        this.commands.push(command);
+      }
+    }
+
+    it('should assign all categories to buckets with prefixes', () => {
+      const result = categorizeCommands(obsidianCommands, MockCommandTrie);
+
+      // Get top level commands (categories)
+      const topLevelCommands = result.commands.filter(
+        (cmd: CuratedCommand) => cmd.prefix?.length === 1
+      );
+      const subCommands = result.commands.filter((cmd: CuratedCommand) => cmd.prefix?.length === 2);
+
+      // Verify we have both top level and sub commands
+      expect(topLevelCommands.length).toBeGreaterThan(0);
+      expect(subCommands.length).toBeGreaterThan(0);
+
+      // Verify each category has a corresponding top-level command with a prefix
+      const assignedCategories = new Set(subCommands.map((cmd: CuratedCommand) => cmd.prefix[0]));
+
+      // Every category should have a prefix assigned
+      expect(assignedCategories.size).toBeGreaterThan(0);
+
+      // Verify each sub-command has a valid parent category prefix
+      subCommands.forEach((cmd: CuratedCommand) => {
+        expect(assignedCategories.has(cmd.prefix[0])).toBe(true);
+      });
+
+      // Verify no duplicate prefixes at category level
+      const uniquePrefixes = new Set(topLevelCommands.map((cmd: CuratedCommand) => cmd.prefix[0]));
+      expect(uniquePrefixes.size).toBe(topLevelCommands.length);
+
+      // Verify each command has required properties
+      result.commands.forEach((cmd: CuratedCommand) => {
+        expect(cmd).toHaveProperty('prefix');
+        expect(cmd).toHaveProperty('name');
+        expect(Array.isArray(cmd.prefix)).toBe(true);
+        expect(cmd.prefix.length).toBeGreaterThan(0);
+      });
+    });
+  });
 });

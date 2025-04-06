@@ -5,7 +5,11 @@ export interface ObsidianCommand {
   name: string;
   prefix?: string[];
   icon?: string;
-  hotkeys?: string[];
+  hotkeys?: { modifiers: string[]; key: string }[];
+  allowProperties?: boolean;
+  allowPreview?: boolean;
+  repeatable?: boolean;
+  showOnMobileToolbar?: boolean;
 }
 
 export interface PrefixAssignmentContext {
@@ -23,8 +27,16 @@ export interface IntentMapping {
   pattern: RegExp;
 }
 
-export interface CuratedCommand extends ObsidianCommand {
+export interface CuratedCommand {
+  id?: string;
+  name: string;
   prefix: string[];
+  icon?: string;
+  hotkeys?: { modifiers: string[]; key: string }[];
+  allowProperties?: boolean;
+  allowPreview?: boolean;
+  repeatable?: boolean;
+  showOnMobileToolbar?: boolean;
 }
 
 export interface TopLevelMapping {
@@ -266,7 +278,11 @@ export function generateCategoryPrefixOptions(category: string): string[] {
   const firstLetterOptions = category
     .split('-')
     .flatMap(word => [word[0].toLowerCase(), word[0].toUpperCase()]);
-  const remainingLetters = category.split('-')[0].split('').slice(1);
+  const remainingLetters = category
+    .split('-')[0] // First word of category
+    .split('')
+    .slice(1)
+    .flatMap(letter => [letter.toLowerCase(), letter.toUpperCase()]);
   return [...firstLetterOptions, ...remainingLetters];
 }
 
@@ -325,8 +341,8 @@ export function categorizeCommands(commands: Record<string, ObsidianCommand>, Co
 
     // Add category command
     categorizedCommands.push({
-      prefix: prefixArray,
       name: formattedName,
+      prefix: prefixArray,
     });
 
     // Add sub-commands with prefixes
