@@ -15,26 +15,27 @@ export const Keys = {
 
 export const patterns = {
   // a: /(?:app(?!.*(?:vault|go))|(export(?!.*canvas))|workspace:(?:show-trash|copy)|editor:focus|tag-pane|outline|random-note|slides|audio-recorder)/,
-  a: /^(?!.*(canvas|vault|notes|toggle-ribbon|app:go)).*(app)/,
+  a: /^(?!.*(canvas|vault|toggle-ribbon|app:go)).*(app|audio|slides|publish|workspace:copy)/,
   b: /bookmarks/,
   c: /canvas/,
   d: /daily-notes/,
-  f: /^(?!.*canvas).*(file|attach|template|properties|zk-prefixer)/,
+  f: /^(?!.*canvas).*(file|attach|template|export-pdf|show-trash|zk-prefixer)/,
   g: /^(?!.*editor).*graph/,
   i: /insert/,
   l: /link/,
-  m: /markdown/,
-  n: /app:go-(?:back|forward)$/,
+  m: /markdown|properties/,
+  n: /(?:app:go-(?:back|forward)|outline)/,
   s: /^(?!.*bookmark).*(search|switcher|command-palette)/,
   S: /sync/,
-  t: /(?=.*editor)(?=.*toggle)|heading|clear-formatting|cycle-list-checklist|swap-line|add-cursor|delete-paragraph|context-menu|fold|formatting/,
+  t: /(?=.*editor)(?=.*toggle)|heading|cycle-list-checklist|swap-line|add-cursor|delete-paragraph|context-menu|fold|formatting/,
   T: /table/,
   Tab: /^(?!.*(table|tag)).*(tab|pane|pin|workspace:close|editor:focus)/,
   u: /theme/,
   v: /vault/,
-  w: /(?:window|workspaces|sidebar|split)/,
+  w: /window|workspaces|sidebar|split|toggle-ribbon|tag-pane|outline/,
+  // w: /(?:window|workspaces|sidebar|split|toggle-ribbon|tag-pane|outline)/,
   W: /webviewer/,
-  M: /.*/,
+  // M: /.*/,
 };
 
 export const topLevelMappings = [
@@ -213,11 +214,11 @@ export const intentMappings = [
     icon: 'globe',
     pattern: patterns.W,
   },
-  {
-    prefix: ['M'],
-    name: 'Miscellaneous',
-    id: undefined,
-    icon: 'circle-help',
-    pattern: patterns.M,
-  },
+  // {
+  //   prefix: ['M'],
+  //   name: 'Miscellaneous',
+  //   id: undefined,
+  //   icon: 'circle-help',
+  //   pattern: patterns.M,
+  // },
 ];

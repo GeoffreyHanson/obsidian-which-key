@@ -146,9 +146,9 @@ export function determinePrefixes(
   const possiblePrefixes = commandBucketCopy.map(command => {
     const { id, name } = command;
 
-    // TODO: Prioritize name letters
     // Get candidate letters from the command's ID and name; deduplicate
-    const firstLetters = new Set([...extractIdFirstLetters(id), ...extractNameFirstLetters(name)]);
+    // const firstLetters = new Set([...extractIdFirstLetters(id), ...extractNameFirstLetters(name)]);
+    const firstLetters = new Set([...extractNameFirstLetters(name), ...extractIdFirstLetters(id)]);
 
     // Update frequency counts
     for (const letter of firstLetters) {
@@ -256,10 +256,19 @@ export function curateCommands(
     }
   }
 
+  log('curatedCommands', curatedCommands);
+
   // Track curated command IDs
-  // const curatedIds = new Set(curatedCommands.map(command => command.id));
+  const curatedIds = new Set(curatedCommands.map(command => command.id));
+  log('curatedIds', curatedIds);
   // const remainingCommands = Object.entries(commands).filter(([id]) => !curatedIds.has(id));
   // console.log('remainingCommands', remainingCommands);
+
+  const remainingCommands = { ...commands };
+  for (const command of curatedIds) {
+    delete remainingCommands[command];
+  }
+  log('remainingCommands', remainingCommands);
 
   return buildCommandTrie(curatedCommands, commandTrie);
 }
