@@ -121,7 +121,7 @@ describe('Helper Functions', () => {
       const parentPrefix = ['f'];
 
       const context: PrefixAssignmentContext = {
-        commands,
+        commandBucket: commands,
         possiblePrefixes,
         prefixesToAssign,
         parentPrefix,
@@ -149,7 +149,7 @@ describe('Helper Functions', () => {
       const parentPrefix = ['x'];
 
       const context: PrefixAssignmentContext = {
-        commands,
+        commandBucket: commands,
         possiblePrefixes,
         prefixesToAssign,
         parentPrefix,
@@ -175,7 +175,7 @@ describe('Helper Functions', () => {
       const parentPrefix = ['z'];
 
       const context: PrefixAssignmentContext = {
-        commands,
+        commandBucket: commands,
         possiblePrefixes,
         prefixesToAssign,
         parentPrefix,
@@ -200,7 +200,7 @@ describe('Helper Functions', () => {
       const parentPrefix = ['a'];
 
       const context: PrefixAssignmentContext = {
-        commands,
+        commandBucket: commands,
         possiblePrefixes,
         prefixesToAssign,
         parentPrefix,
@@ -300,6 +300,27 @@ describe('Helper Functions', () => {
     });
 
     // Filter intent patterns
+    it('should filter bookmark commands', () => {
+      const commandIdsToMatch = [
+        'bookmarks:open',
+        'bookmarks:bookmark-all-tabs',
+        'bookmarks:bookmark-current-heading',
+        'bookmarks:bookmark-current-search',
+        'bookmarks:bookmark-current-section',
+        'bookmarks:bookmark-current-view',
+        'bookmarks:unbookmark-current-view',
+      ];
+
+      const filteredIds = filterCommandsByIntent(commandsWithoutIds, patterns.b).map(
+        command => command.id
+      );
+
+      expect(filteredIds.length).toBe(commandIdsToMatch.length);
+      commandIdsToMatch.forEach(id => {
+        expect(filteredIds).toContain(id);
+      });
+    });
+
     it('should filter canvas commands', () => {
       const commandIdsToMatch = [
         'canvas:convert-to-file',
@@ -309,6 +330,19 @@ describe('Helper Functions', () => {
       ];
 
       const filteredIds = filterCommandsByIntent(commandsWithoutIds, patterns.c).map(
+        command => command.id
+      );
+
+      expect(filteredIds.length).toBe(commandIdsToMatch.length);
+      commandIdsToMatch.forEach(id => {
+        expect(filteredIds).toContain(id);
+      });
+    });
+
+    it('should filter daily notes commands', () => {
+      const commandIdsToMatch = ['daily-notes', 'daily-notes:goto-next', 'daily-notes:goto-prev'];
+
+      const filteredIds = filterCommandsByIntent(commandsWithoutIds, patterns.d).map(
         command => command.id
       );
 

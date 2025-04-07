@@ -13,7 +13,7 @@ export interface ObsidianCommand {
 }
 
 export interface PrefixAssignmentContext {
-  commands: ObsidianCommand[];
+  commandBucket: ObsidianCommand[];
   possiblePrefixes: Set<string>[];
   prefixesToAssign: string[];
   parentPrefix: string[];
@@ -105,7 +105,9 @@ export function generateSortedPrefixes(prefixCounts: Record<string, number>): st
  * @returns Updated commands array with assigned prefixes
  */
 export function assignPrefixesToCommands(context: PrefixAssignmentContext): ObsidianCommand[] {
-  const { commands, possiblePrefixes, prefixesToAssign, parentPrefix } = context;
+  const { commandBucket, possiblePrefixes, prefixesToAssign, parentPrefix } = context;
+
+  const commands = commandBucket.map(command => ({ ...command }));
 
   // Process prefixes from least common to most common
   for (const prefix of prefixesToAssign) {
@@ -128,18 +130,20 @@ export function assignPrefixesToCommands(context: PrefixAssignmentContext): Obsi
 /**
  * Determine prefixes for commands
  * @param prefixArray - Array with intent prefix
- * @param commands - Array of commands to determine prefixes for
+ * @param commandBucket - Array of commands to determine prefixes for
  * @returns Array of commands with determined prefixes
  */
 export function determinePrefixes(
   prefixArray: string[],
-  commands: ObsidianCommand[]
+  commandBucket: ObsidianCommand[]
 ): ObsidianCommand[] {
+  const commandBucketCopy = commandBucket.map(command => ({ ...command }));
+
   // Count prefix frequency
   const prefixCounts: Record<string, number> = {};
 
   // Generate possible prefixes for each command
-  const possiblePrefixes = commands.map(command => {
+  const possiblePrefixes = commandBucketCopy.map(command => {
     const { id, name } = command;
 
     // TODO: Prioritize name letters
@@ -160,7 +164,7 @@ export function determinePrefixes(
 
   // Assign prefixes to commands
   const updatedCommands = assignPrefixesToCommands({
-    commands,
+    commandBucket: commandBucketCopy,
     possiblePrefixes,
     prefixesToAssign,
     parentPrefix: prefixArray,
@@ -253,9 +257,9 @@ export function curateCommands(
   }
 
   // Track curated command IDs
-  const curatedIds = new Set(curatedCommands.map(command => command.id));
-  const remainingCommands = Object.entries(commands).filter(([id]) => !curatedIds.has(id));
-  console.log('remainingCommands', remainingCommands);
+  // const curatedIds = new Set(curatedCommands.map(command => command.id));
+  // const remainingCommands = Object.entries(commands).filter(([id]) => !curatedIds.has(id));
+  // console.log('remainingCommands', remainingCommands);
 
   return buildCommandTrie(curatedCommands, commandTrie);
 }
