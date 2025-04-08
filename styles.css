@@ -19,11 +19,13 @@
     flex-direction: column;
 }
 
+/* TODO: Serif font for clarity */
 .which-key-prefix {
     display: inline-flex;
-    color: var(--text-accent);
-    width: 20px;
     justify-content: center;
+    width: 20px;
+    color: var(--text-accent);
+    font-family: Consolas, monospace;
 }
 
 .which-key-command-arrow,

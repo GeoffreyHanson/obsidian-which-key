@@ -115,16 +115,17 @@ describe('Helper Functions', () => {
         { id: 'file:save', name: 'Save' },
       ];
 
-      const possiblePrefixes = [new Set(['o', 'o']), new Set(['s', 's'])];
+      const preferredPrefixes = [new Set(['o', 'o']), new Set(['s', 's'])];
+      const fallbackPrefixes = [new Set(['p', 'e', 'n']), new Set(['a', 'v', 'e'])];
 
-      const prefixesToAssign = ['o', 'O', 's', 'S'];
+      const prefixesToAssign = new Set(['o', 'O', 's', 'S', 'a', 'A', 'v', 'V', 'e', 'E']);
       const parentPrefix = ['f'];
-
       const context: PrefixAssignmentContext = {
-        commandBucket: commands,
-        possiblePrefixes,
-        prefixesToAssign,
         parentPrefix,
+        commandBucket: commands,
+        prefixesToAssign,
+        preferredPrefixes,
+        fallbackPrefixes,
       };
 
       const result = assignPrefixesToCommands(context);
@@ -139,18 +140,35 @@ describe('Helper Functions', () => {
         { id: 'cmd:common', name: 'Common Command' },
       ];
 
-      const possiblePrefixes = [
+      const preferredPrefixes = [
         new Set(['r', 'r', 'c']), // First command can use 'r' or 'c'
         new Set(['c', 'c', 'c']), // Second command can only use 'c'
       ];
+      const fallbackPrefixes = [new Set(['a', 'r', 'e']), new Set(['o', 'm', 'n'])];
 
       // 'c' is more common (appears in both sets), 'r' is less common
-      const prefixesToAssign = ['r', 'R', 'c', 'C'];
+      const prefixesToAssign = new Set([
+        'r',
+        'R',
+        'c',
+        'C',
+        'a',
+        'A',
+        'e',
+        'E',
+        'o',
+        'O',
+        'm',
+        'M',
+        'n',
+        'N',
+      ]);
       const parentPrefix = ['x'];
 
       const context: PrefixAssignmentContext = {
         commandBucket: commands,
-        possiblePrefixes,
+        preferredPrefixes: preferredPrefixes,
+        fallbackPrefixes,
         prefixesToAssign,
         parentPrefix,
       };
@@ -169,14 +187,39 @@ describe('Helper Functions', () => {
         { id: 'cmd:second', name: 'Second Command' },
       ];
 
-      const possiblePrefixes = [new Set(['f']), new Set(['s'])];
+      const preferredPrefixes = [new Set(['f']), new Set(['s'])];
+      const fallbackPrefixes = [new Set(['i', 'r', 's', 't']), new Set(['e', 'c', 'o', 'n', 'd'])];
 
-      const prefixesToAssign = ['f', 's'];
+      const prefixesToAssign = new Set([
+        'f',
+        'F',
+        's',
+        'S',
+        'i',
+        'I',
+        'r',
+        'R',
+        's',
+        'S',
+        't',
+        'T',
+        'e',
+        'E',
+        'c',
+        'C',
+        'o',
+        'O',
+        'n',
+        'N',
+        'd',
+        'D',
+      ]);
       const parentPrefix = ['z'];
 
       const context: PrefixAssignmentContext = {
         commandBucket: commands,
-        possiblePrefixes,
+        preferredPrefixes,
+        fallbackPrefixes,
         prefixesToAssign,
         parentPrefix,
       };
@@ -192,16 +235,17 @@ describe('Helper Functions', () => {
     it('should handle case-insensitive prefix matching', () => {
       const commands: ObsidianCommand[] = [{ id: 'app:test', name: 'Test App' }];
 
-      const possiblePrefixes = [
-        new Set(['t']), // Lowercase 't'
-      ];
+      const preferredPrefixes = [new Set(['t', 'a'])];
+      const fallbackPrefixes = [new Set(['e', 's'])];
 
-      const prefixesToAssign = ['T']; // Uppercase 'T'
+      // if 't' has already been assigned
+      const prefixesToAssign = new Set(['T', 'a', 'A', 'e', 'E', 's', 'S']);
       const parentPrefix = ['a'];
 
       const context: PrefixAssignmentContext = {
         commandBucket: commands,
-        possiblePrefixes,
+        preferredPrefixes,
+        fallbackPrefixes,
         prefixesToAssign,
         parentPrefix,
       };
