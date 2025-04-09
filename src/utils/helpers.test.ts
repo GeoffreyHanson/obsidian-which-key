@@ -2,6 +2,7 @@ import {
   determinePrefixes,
   extractIdFirstLetters,
   extractNameFirstLetters,
+  extractNameRemainingLetters,
   generateSortedPrefixes,
   assignPrefixesToCommands,
   type PrefixAssignmentContext,
@@ -42,10 +43,10 @@ describe('Helper Functions', () => {
   });
 
   describe('extractNameFirstLetters', () => {
-    it('should extract first letter from each word', () => {
-      const name = 'Open Recent File';
+    it('should extract text after colon and the first letter from each word', () => {
+      const name = 'Table: Insert Column';
       const result = extractNameFirstLetters(name);
-      expect(result).toEqual(['o', 'r', 'f']);
+      expect(result).toEqual(['i', 'c']);
     });
 
     it('should prioritize numbers in a given string', () => {
@@ -53,11 +54,13 @@ describe('Helper Functions', () => {
       const result = extractNameFirstLetters(name);
       expect(result).toEqual(['h', '2', 's']);
     });
+  });
 
-    it('should extract text after colon', () => {
+  describe('extractNameRemainingLetters', () => {
+    it('should extract remaining letters from the first word of the command name', () => {
       const name = 'Table: Insert Column';
-      const result = extractNameFirstLetters(name);
-      expect(result).toEqual(['i', 'c']);
+      const result = extractNameRemainingLetters(name);
+      expect(result).toEqual(['n', 's', 'e', 'r', 't']);
     });
   });
 
@@ -474,71 +477,7 @@ describe('Helper Functions', () => {
   //   }
 
   // it('should sort commands by intent and identify unsorted commands', () => {
-  //   const result = curateCommands(
-  //     obsidianCommands,
-  //     topLevelMappings,
-  //     intentMappings,
-  //     MockCommandTrie
-  //   );
 
-  //   // Get all command IDs from the input
-  //   const allCommandIds = new Set(Object.keys(obsidianCommands));
-
-  //   // Get all curated command IDs (excluding top-level mappings)
-  //   const curatedCommandIds = new Set(
-  //     result.commands
-  //       .filter((cmd: CuratedCommand) => cmd.id && !topLevelMappings.some(m => m.id === cmd.id))
-  //       .map((cmd: CuratedCommand) => cmd.id as string)
-  //   );
-
-  //   // Find commands that weren't sorted by intent
-  //   const uncategorizedCommands = Array.from(allCommandIds)
-  //     .filter(id => !curatedCommandIds.has(id))
-  //     .map(id => ({
-  //       id,
-  //       command: obsidianCommands[id as keyof typeof obsidianCommands],
-  //       matchedIntent: intentMappings.find(m => m.pattern.test(id))?.name || 'none',
-  //     }));
-
-  //   if (uncategorizedCommands.length > 0) {
-  //     console.log(
-  //       'Commands not categorized by any intent:',
-  //       uncategorizedCommands.map(cmd => ({
-  //         id: cmd.id,
-  //         name: cmd.command.name,
-  //         matchedIntent: cmd.matchedIntent,
-  //       }))
-  //     );
-  //   }
-
-  //   // The test should fail if there are any uncategorized commands
-  //   expect(uncategorizedCommands).toHaveLength(0);
-
-  //   // Group commands by their intent categories for analysis
-  //   const commandsByCategory = new Map<string, CuratedCommand[]>();
-  //   result.commands
-  //     .filter((cmd: CuratedCommand) => cmd.id && !topLevelMappings.some(m => m.id === cmd.id))
-  //     .forEach((cmd: CuratedCommand) => {
-  //       const category = intentMappings.find(intent => intent.pattern.test(cmd.id || ''))?.name;
-  //       if (category) {
-  //         if (!commandsByCategory.has(category)) {
-  //           commandsByCategory.set(category, []);
-  //         }
-  //         commandsByCategory.get(category)?.push(cmd);
-  //       }
-  //     });
-
-  //   // Log commands by category for analysis
-  //   console.log(
-  //     'Commands by category:',
-  //     Array.from(commandsByCategory.entries()).map(([category, commands]) => ({
-  //       category,
-  //       count: commands.length,
-  //       prefix: intentMappings.find(intent => intent.name === category)?.prefix[0],
-  //       commands: commands.map(c => c.name),
-  //     }))
-  //   );
-  // });
   // });
 
   describe('createCategoryBuckets', () => {
