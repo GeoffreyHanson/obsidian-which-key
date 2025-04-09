@@ -40,6 +40,14 @@ export interface CuratedCommand {
   showOnMobileToolbar?: boolean;
 }
 
+export interface LeanCommand {
+  id: string;
+  name: string;
+  icon?: string;
+  hotkeys?: { modifiers: string[]; key: string }[];
+  prefix?: string[];
+}
+
 export interface TopLevelMapping {
   prefix: string[];
   name: string;
@@ -129,19 +137,18 @@ export function generateSortedPrefixes(
 export function assignPrefixesToCommands(context: PrefixAssignmentContext): ObsidianCommand[] {
   const { parentPrefix, commandBucket, prefixesToAssign, preferredPrefixes, fallbackPrefixes } =
     context;
-  const commandBucketClone = structuredClone(commandBucket);
 
   // First try preferred prefixes, then fallback prefixes
   for (const prefixOptions of [preferredPrefixes, fallbackPrefixes]) {
     for (const prefix of prefixesToAssign) {
       // Try to assign this prefix to an unassigned command
-      for (let i = 0; i < commandBucketClone.length; i++) {
+      for (let i = 0; i < commandBucket.length; i++) {
         // Skip commands that already have a prefix
-        if (commandBucketClone[i].prefix) continue;
+        if (commandBucket[i].prefix) continue;
 
         // Check if this command can use this prefix with current source
         if (prefixOptions[i].has(prefix.toLowerCase())) {
-          commandBucketClone[i].prefix = [...parentPrefix, prefix];
+          commandBucket[i].prefix = [...parentPrefix, prefix];
           prefixesToAssign.delete(prefix);
           break; // Move to next prefix after assigning this one
         }
@@ -149,7 +156,7 @@ export function assignPrefixesToCommands(context: PrefixAssignmentContext): Obsi
     }
   }
 
-  return commandBucketClone;
+  return commandBucket;
 }
 
 /**
@@ -160,16 +167,16 @@ export function assignPrefixesToCommands(context: PrefixAssignmentContext): Obsi
  */
 export function determinePrefixes(
   prefixArray: string[],
-  commandBucket: ObsidianCommand[]
-): ObsidianCommand[] {
-  const commandBucketClone = structuredClone(commandBucket);
+  commandBucket: LeanCommand[]
+): LeanCommand[] {
+  log('commandBucket', commandBucket);
 
   // Count prefix frequency
   const prefixCounts: Record<string, number> = {};
   const fallbackCounts: Record<string, number> = {};
 
   // Generate possible prefixes for each command
-  const preferredPrefixes = commandBucketClone.map((command: ObsidianCommand) => {
+  const preferredPrefixes = commandBucket.map((command: ObsidianCommand) => {
     const { id, name } = command;
 
     // Get candidate letters from the command's ID and name; deduplicate
@@ -183,7 +190,7 @@ export function determinePrefixes(
     return firstLetters;
   });
 
-  const fallbackPrefixes = commandBucketClone.map((command: ObsidianCommand) => {
+  const fallbackPrefixes = commandBucket.map((command: ObsidianCommand) => {
     const { name } = command;
     const fallbackFirstLetters = new Set([...extractNameRemainingLetters(name)]);
 
@@ -202,7 +209,7 @@ export function determinePrefixes(
   // Assign prefixes to commands
   const updatedCommands = assignPrefixesToCommands({
     parentPrefix: prefixArray,
-    commandBucket: commandBucketClone,
+    commandBucket,
     prefixesToAssign,
     preferredPrefixes,
     fallbackPrefixes,
@@ -217,7 +224,7 @@ export function determinePrefixes(
 }
 
 /**
- * Remove keys from command object
+ * Remove keys & callbacks from command object
  * @param commands - Raw commands object from Obsidian
  * @returns Array of standardized commands
  */
@@ -236,10 +243,7 @@ export function shuckCommands(commands: Record<string, any>): ObsidianCommand[] 
  * @param pattern - RegExp pattern to match command IDs
  * @returns Array of filtered commands
  */
-export function filterCommandsByIntent(
-  commands: ObsidianCommand[],
-  pattern: RegExp
-): ObsidianCommand[] {
+export function filterCommandsByIntent(commands: LeanCommand[], pattern: RegExp): LeanCommand[] {
   return commands.filter(command => pattern.test(command.id));
 }
 
@@ -270,14 +274,13 @@ export function buildCommandTrie(commands: CuratedCommand[], commandTrie: any): 
  * @returns Populated CommandTrie instance
  */
 export function curateCommands(
-  commands: Record<string, any>,
+  // commands: Record<string, any>,
+  commands: ObsidianCommand[],
   topLevelMappings: TopLevelMapping[],
   intentMappings: IntentMapping[],
-  CommandTrie: any
+  commandTrie: any
 ): any {
-  const commandTrie = new CommandTrie();
-  const commandsToCurate = shuckCommands(commands);
-  console.log('all commands:', commands);
+  console.log('all commands (curate):', commands);
 
   const curatedCommands: CuratedCommand[] = [...topLevelMappings];
 
@@ -285,7 +288,7 @@ export function curateCommands(
     // Push top level intent mapping
     // curatedCommands.push({ prefix, name, icon } as CuratedCommand);
 
-    const bucket = filterCommandsByIntent(commandsToCurate, pattern);
+    const bucket = filterCommandsByIntent(commands, pattern);
 
     if (bucket.length > 0) {
       curatedCommands.push({ prefix, name, icon } as CuratedCommand);
@@ -294,17 +297,18 @@ export function curateCommands(
     }
   }
 
+  // TODO: Push remaining commands to misc
+
   log('curatedCommands', curatedCommands);
 
   // Track curated command IDs
   const curatedIds = new Set(curatedCommands.map(command => command.id));
   log('curatedIds', curatedIds);
-  // const remainingCommands = Object.entries(commands).filter(([id]) => !curatedIds.has(id));
-  // console.log('remainingCommands', remainingCommands);
 
-  const remainingCommands = { ...commands };
-  for (const command of curatedIds) {
-    delete remainingCommands[command];
+  const remainingCommands = new Set(commands.map(command => command.id));
+  // Loop over curatedIds, if the command has been curated, remove it from remainingCommands
+  for (const id of curatedIds) {
+    remainingCommands.delete(id);
   }
   log('remainingCommands', remainingCommands);
 
@@ -316,12 +320,18 @@ export function curateCommands(
  * @param commands - Commands from Obsidian
  * @returns Object of commands grouped by category
  */
-export function createCategoryBuckets(commands: Record<string, ObsidianCommand>): CategoryBuckets {
-  return Object.entries(commands).reduce((buckets: CategoryBuckets, [id, command]) => {
-    const [category] = id.split(':');
+export function createCategoryBuckets(commands: ObsidianCommand[]): CategoryBuckets {
+  return commands.reduce((buckets: CategoryBuckets, command) => {
+    const category = command?.id;
     (buckets[category] = buckets[category] || []).push(command);
     return buckets;
   }, {});
+
+  // return Object.entries(commands).reduce((buckets: CategoryBuckets, [id, command]) => {
+  //   const [category] = id.split(':');
+  //   (buckets[category] = buckets[category] || []).push(command);
+  //   return buckets;
+  // }, {});
 }
 
 /**
@@ -377,9 +387,8 @@ export function assignCategoryPrefixes(
  * @param CommandTrie - CommandTrie class instance
  * @returns Populated CommandTrie instance
  */
-export function categorizeCommands(commands: Record<string, ObsidianCommand>, CommandTrie: any) {
-  log('all commands', commands);
-  const commandTrie = new CommandTrie();
+export function categorizeCommands(commands: LeanCommand[], commandTrie: any) {
+  log('all commands (categorize)', commands);
   // Group commands by category
   const categoryBuckets = createCategoryBuckets(commands);
 

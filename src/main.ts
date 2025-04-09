@@ -9,7 +9,7 @@ import {
   Setting,
 } from 'obsidian';
 import { EditorView, PluginValue, ViewPlugin, ViewUpdate } from '@codemirror/view';
-import { categorizeCommands, curateCommands } from 'src/utils/helpers';
+import { categorizeCommands, curateCommands, shuckCommands } from 'src/utils/helpers';
 import { Keys, topLevelMappings, intentMappings } from './utils/constants';
 
 const { log } = console;
@@ -450,10 +450,12 @@ export default class WhichKey extends Plugin {
 
     log(this.app);
 
+    const leanCommands = shuckCommands(this.app.commands.commands);
+
     // Create the command trie
     this.commandTrie = this.settings.categorizedCommands
-      ? categorizeCommands(this.app.commands.commands, CommandTrie)
-      : curateCommands(this.app.commands.commands, topLevelMappings, intentMappings, CommandTrie);
+      ? categorizeCommands(leanCommands, new CommandTrie())
+      : curateCommands(leanCommands, topLevelMappings, intentMappings, new CommandTrie());
 
     // Initialize shared state with the command trie
     const ui = new WhichKeyUI(this.app);
