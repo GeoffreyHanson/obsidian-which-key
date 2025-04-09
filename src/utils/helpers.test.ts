@@ -14,10 +14,8 @@ import {
   generateCategoryPrefixOptions,
   assignCategoryPrefixes,
   categorizeCommands,
-  curateCommands,
 } from './helpers';
 import { obsidianCommands } from '../__fixtures__/obsidian-commands';
-import { intentMappings, topLevelMappings } from '../utils/constants';
 import { patterns } from '../utils/constants';
 
 const commandsWithoutIds = shuckCommands(obsidianCommands);
@@ -121,7 +119,7 @@ describe('Helper Functions', () => {
       const prefixesToAssign = new Set(['o', 'O', 's', 'S', 'a', 'A', 'v', 'V', 'e', 'E']);
       const parentPrefix = ['f'];
       const context: PrefixAssignmentContext = {
-        parentPrefix,
+        parentPrefix: parentPrefix,
         commandBucket: commands,
         prefixesToAssign,
         preferredPrefixes,
@@ -170,7 +168,7 @@ describe('Helper Functions', () => {
         preferredPrefixes: preferredPrefixes,
         fallbackPrefixes,
         prefixesToAssign,
-        parentPrefix,
+        parentPrefix: parentPrefix,
       };
 
       const result = assignPrefixesToCommands(context);
@@ -221,7 +219,7 @@ describe('Helper Functions', () => {
         preferredPrefixes,
         fallbackPrefixes,
         prefixesToAssign,
-        parentPrefix,
+        parentPrefix: parentPrefix,
       };
 
       const result = assignPrefixesToCommands(context);
@@ -247,7 +245,7 @@ describe('Helper Functions', () => {
         preferredPrefixes,
         fallbackPrefixes,
         prefixesToAssign,
-        parentPrefix,
+        parentPrefix: parentPrefix,
       };
 
       const result = assignPrefixesToCommands(context);

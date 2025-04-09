@@ -121,7 +121,6 @@ export function generateSortedPrefixes(
     .flatMap(([prefix]) => [prefix, prefix.toUpperCase()]);
 }
 
-// TODO: Clean up
 /**
  * Assign prefixes to commands based on availability and priority
  * @param context - The context object containing all necessary data
@@ -130,40 +129,27 @@ export function generateSortedPrefixes(
 export function assignPrefixesToCommands(context: PrefixAssignmentContext): ObsidianCommand[] {
   const { parentPrefix, commandBucket, prefixesToAssign, preferredPrefixes, fallbackPrefixes } =
     context;
+  const commandBucketClone = structuredClone(commandBucket);
 
-  const commandBucketCopy = commandBucket.map(command => ({ ...command }));
-  // const commandBucketClone = structuredClone(commandBucket);
+  // First try preferred prefixes, then fallback prefixes
+  for (const prefixOptions of [preferredPrefixes, fallbackPrefixes]) {
+    for (const prefix of prefixesToAssign) {
+      // Try to assign this prefix to an unassigned command
+      for (let i = 0; i < commandBucketClone.length; i++) {
+        // Skip commands that already have a prefix
+        if (commandBucketClone[i].prefix) continue;
 
-  // Process prefixes from least common to most common for the whole bucket
-  for (const prefix of prefixesToAssign) {
-    // Loop through commands & possible prefixes, indexing against possiblePrefixes
-    for (let i = 0; i < commandBucketCopy.length; i++) {
-      // Skip commands that already have a prefix
-      if (commandBucketCopy[i].prefix) continue;
-
-      // Check if this command can use this prefix
-      if (preferredPrefixes[i].has(prefix.toLowerCase())) {
-        commandBucketCopy[i].prefix = [...parentPrefix, prefix];
-        prefixesToAssign.delete(prefix);
-        break; // Move to next prefix after assigning this one
+        // Check if this command can use this prefix with current source
+        if (prefixOptions[i].has(prefix.toLowerCase())) {
+          commandBucketClone[i].prefix = [...parentPrefix, prefix];
+          prefixesToAssign.delete(prefix);
+          break; // Move to next prefix after assigning this one
+        }
       }
     }
   }
 
-  // Assign leftovers
-  for (const prefix of prefixesToAssign) {
-    for (let i = 0; i < commandBucketCopy.length; i++) {
-      if (commandBucketCopy[i].prefix) continue;
-
-      if (fallbackPrefixes[i].has(prefix.toLowerCase())) {
-        commandBucketCopy[i].prefix = [...parentPrefix, prefix];
-        prefixesToAssign.delete(prefix);
-        break;
-      }
-    }
-  }
-
-  return commandBucketCopy;
+  return commandBucketClone;
 }
 
 /**
@@ -176,14 +162,14 @@ export function determinePrefixes(
   prefixArray: string[],
   commandBucket: ObsidianCommand[]
 ): ObsidianCommand[] {
-  const commandBucketCopy = commandBucket.map(command => ({ ...command }));
+  const commandBucketClone = structuredClone(commandBucket);
 
   // Count prefix frequency
   const prefixCounts: Record<string, number> = {};
   const fallbackCounts: Record<string, number> = {};
 
   // Generate possible prefixes for each command
-  const preferredPrefixes = commandBucketCopy.map(command => {
+  const preferredPrefixes = commandBucketClone.map((command: ObsidianCommand) => {
     const { id, name } = command;
 
     // Get candidate letters from the command's ID and name; deduplicate
@@ -197,7 +183,7 @@ export function determinePrefixes(
     return firstLetters;
   });
 
-  const fallbackPrefixes = commandBucketCopy.map(command => {
+  const fallbackPrefixes = commandBucketClone.map((command: ObsidianCommand) => {
     const { name } = command;
     const fallbackFirstLetters = new Set([...extractNameRemainingLetters(name)]);
 
@@ -216,7 +202,7 @@ export function determinePrefixes(
   // Assign prefixes to commands
   const updatedCommands = assignPrefixesToCommands({
     parentPrefix: prefixArray,
-    commandBucket: commandBucketCopy,
+    commandBucket: commandBucketClone,
     prefixesToAssign,
     preferredPrefixes,
     fallbackPrefixes,
