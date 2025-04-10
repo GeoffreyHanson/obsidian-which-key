@@ -286,13 +286,17 @@ class WhichKeyUI {
 
     const title = this.container.querySelector('.which-key-pressed');
     if (title) {
-      title.textContent = `${keysPressed.join(' > ')}`;
+      title.textContent = `${keysPressed.join(' » ')}`;
     }
 
     const commandsEl = this.container.querySelector('.which-key-commands');
     if (commandsEl) {
       commandsEl.textContent = '';
+
       possibleCommands.forEach(({ key, command }) => {
+        // Change space for display
+        if (key === Keys.SPACE) key = '␣';
+
         const lucideIcon = command?.icon?.replace('lucide-', '');
         const cmdEl = document.createElement('div');
         cmdEl.addClass('which-key-command');
