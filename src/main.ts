@@ -312,8 +312,7 @@ class WhichKeyUI {
         nameEl.addClass('which-key-name');
 
         prefixEl.textContent = key;
-        // nameEl.textContent = `: ${prefix ? '' : '+'}${command.name}`;
-        nameEl.textContent = command.name;
+        nameEl.textContent = `${command.id ? '' : '+'}${command.name}`;
 
         cmdEl.appendChild(prefixEl);
         cmdEl.appendChild(arrowEl);
