@@ -10,7 +10,7 @@ import {
 } from 'obsidian';
 import { EditorView, PluginValue, ViewPlugin, ViewUpdate } from '@codemirror/view';
 import { categorizeCommands, curateCommands, shuckCommands } from 'src/utils/helpers';
-import { Keys, topLevelMappings, intentMappings } from './utils/constants';
+import { KEYS, topLevelMappings, intentMappings } from './utils/constants';
 
 const { log } = console;
 
@@ -174,11 +174,11 @@ class CommandTrie {
     Object.entries(commands).forEach(([abvCommandName, command]) => {
       // const sequenceOptions = command.name.split(' ').map(word => word[0].toLowerCase());
       const primaryPrefixOptions = command.name
-        .split(Keys.SPACE)
+        .split(KEYS.SPACE)
         .map(word => [word[0].toLowerCase(), word[0].toUpperCase()])
         .flat();
 
-      const secondaryPrefixOption = command.name.split(Keys.SPACE)[0].split('').slice(1);
+      const secondaryPrefixOption = command.name.split(KEYS.SPACE)[0].split('').slice(1);
 
       const sequenceOptions = [...primaryPrefixOptions, ...secondaryPrefixOption];
 
@@ -295,7 +295,7 @@ class WhichKeyUI {
 
       possibleCommands.forEach(({ key, command }) => {
         // Change space for display
-        if (key === Keys.SPACE) key = '␣';
+        if (key === KEYS.SPACE) key = '␣';
 
         const lucideIcon = command?.icon?.replace('lucide-', '');
         const cmdEl = document.createElement('div');
@@ -372,15 +372,15 @@ class SharedState {
     // Ignore key presses when editing the note title or when in vim's insert mode
     if (!editorHasFocus || this.insertMode) return;
 
-    if (key === Keys.ESCAPE) {
+    if (key === KEYS.ESCAPE) {
       this.resetState();
       return;
     }
 
     // Ignore shift to allow capital letters for command categories
-    if (key === Keys.SHIFT) return;
+    if (key === KEYS.SHIFT) return;
 
-    if (key === Keys.SPACE && !this.isRecording) {
+    if (key === KEYS.SPACE && !this.isRecording) {
       this.isRecording = true;
       this.currentKeySequence = [];
 

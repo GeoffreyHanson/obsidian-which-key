@@ -1,4 +1,4 @@
-export const Keys = {
+export const KEYS = {
   SPACE: ' ',
   SHIFT: 'Shift',
   CTRL: 'Control',
@@ -40,13 +40,13 @@ export const patterns = {
 
 export const topLevelMappings = [
   {
-    prefix: [Keys.SPACE],
+    prefix: [KEYS.SPACE],
     name: 'Open Quick Switcher',
     id: 'switcher:open',
     icon: 'square-chevron-right',
   },
   {
-    prefix: [Keys.FORWARD_SLASH],
+    prefix: [KEYS.FORWARD_SLASH],
     name: 'Open Global Search',
     id: 'global-search:open',
     icon: 'globe',
@@ -64,13 +64,13 @@ export const topLevelMappings = [
     icon: 'square-terminal',
   },
   {
-    prefix: [Keys.PIPE],
+    prefix: [KEYS.PIPE],
     name: 'Split right',
     id: 'workspace:split-vertical',
     icon: 'separator-vertical',
   },
   {
-    prefix: [Keys.DASH],
+    prefix: [KEYS.DASH],
     name: 'Split down',
     id: 'workspace:split-horizontal',
     icon: 'separator-horizontal',
@@ -114,7 +114,7 @@ export const intentMappings = [
     pattern: patterns.l,
   },
   {
-    prefix: [Keys.TAB],
+    prefix: [KEYS.TAB],
     name: 'Tab navigation',
     id: undefined,
     icon: 'arrow-right-to-line',
