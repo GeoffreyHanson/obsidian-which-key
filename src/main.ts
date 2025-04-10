@@ -115,9 +115,8 @@ class CommandTrie {
       }
     }
 
-    // Get all possible next keys from current node
+    // Get all possible children from current node
     const possibilities: Array<{ key: string; command: WhichKeyCommand }> = [];
-
     Object.entries(current.children).forEach(([key, node]) => {
       if (node.name) {
         possibilities.push({
@@ -250,14 +249,34 @@ class CommandTrie {
 class WhichKeyUI {
   private app: App;
   private container: HTMLElement;
-  private visible = false;
+  visible = false;
 
   constructor(app: App) {
     this.app = app;
   }
 
+  private createContainer() {
+    this.container = document.createElement('div');
+    this.container.addClass('which-key-container', 'dialog');
+
+    const keyPressed = document.createElement('div');
+    keyPressed.addClass('which-key-pressed');
+    this.container.appendChild(keyPressed);
+
+    const possibleCommands = document.createElement('div');
+    possibleCommands.addClass('which-key-commands');
+    this.container.appendChild(possibleCommands);
+
+    document.body.appendChild(this.container);
+  }
+
   // UI methods focus purely on display
-  showCommands(commands: Array<{ key: string; command: WhichKeyCommand }>, prefix?: string[]) {
+  showCommands(
+    possibleCommands: Array<{ key: string; command: WhichKeyCommand }>,
+    keysPressed?: string[]
+  ) {
+    keysPressed = keysPressed ? ['Leader', ...keysPressed] : ['Leader'];
+
     if (!this.container) {
       this.createContainer();
     }
@@ -267,14 +286,13 @@ class WhichKeyUI {
 
     const title = this.container.querySelector('.which-key-pressed');
     if (title) {
-      // Join the keys with a space for display
-      title.textContent = `Key sequence: ${prefix ? prefix.join(Keys.SPACE) : 'Space'}`;
+      title.textContent = `${keysPressed.join(' > ')}`;
     }
 
     const commandsEl = this.container.querySelector('.which-key-commands');
     if (commandsEl) {
       commandsEl.textContent = '';
-      commands.forEach(({ key, command }) => {
+      possibleCommands.forEach(({ key, command }) => {
         const lucideIcon = command?.icon?.replace('lucide-', '');
         const cmdEl = document.createElement('div');
         cmdEl.addClass('which-key-command');
@@ -305,19 +323,11 @@ class WhichKeyUI {
     }
   }
 
-  private createContainer() {
-    this.container = document.createElement('div');
-    this.container.addClass('which-key-container', 'dialog');
-
-    const keyPressed = document.createElement('div');
-    keyPressed.addClass('which-key-pressed');
-    this.container.appendChild(keyPressed);
-
-    const possibleCommands = document.createElement('div');
-    possibleCommands.addClass('which-key-commands');
-    this.container.appendChild(possibleCommands);
-
-    document.body.appendChild(this.container);
+  hideCommands() {
+    if (this.container) {
+      this.container.style.display = 'none';
+      this.visible = false;
+    }
   }
 }
 
@@ -341,6 +351,7 @@ class SharedState {
   private resetState() {
     this.isRecording = false;
     this.currentKeySequence = [];
+    this.ui.hideCommands();
   }
 
   interceptKeyPress = (event: KeyboardEvent) => {
@@ -357,6 +368,11 @@ class SharedState {
     // Ignore key presses when editing the note title or when in vim's insert mode
     if (!editorHasFocus || this.insertMode) return;
 
+    if (key === Keys.ESCAPE) {
+      this.resetState();
+      return;
+    }
+
     // Ignore shift to allow capital letters for command categories
     if (key === Keys.SHIFT) return;
 
@@ -372,7 +388,7 @@ class SharedState {
       return;
     }
 
-    // If not recording and key isn't space, exit
+    // If not recording and key isn't Space, exit
     if (!this.isRecording) return;
     this.interceptKeyPress(event);
 
@@ -380,7 +396,7 @@ class SharedState {
 
     // Show possible completions
     const commands = this.commandTrie.getPossibleCommands(this.currentKeySequence);
-    this.ui.showCommands(commands, ['Space', ...this.currentKeySequence]); // Add Space back just for display
+    this.ui.showCommands(commands, this.currentKeySequence);
 
     // Check if sequence resolves to a command
     const commandId = this.commandTrie.getCommandId(this.currentKeySequence);

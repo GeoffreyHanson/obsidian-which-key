@@ -274,7 +274,6 @@ export function buildCommandTrie(commands: CuratedCommand[], commandTrie: any): 
  * @returns Populated CommandTrie instance
  */
 export function curateCommands(
-  // commands: Record<string, any>,
   commands: ObsidianCommand[],
   topLevelMappings: TopLevelMapping[],
   intentMappings: IntentMapping[],
@@ -286,7 +285,6 @@ export function curateCommands(
 
   for (const { prefix, name, pattern, icon } of intentMappings) {
     // Push top level intent mapping
-    // curatedCommands.push({ prefix, name, icon } as CuratedCommand);
 
     const bucket = filterCommandsByIntent(commands, pattern);
 
@@ -326,12 +324,6 @@ export function createCategoryBuckets(commands: ObsidianCommand[]): CategoryBuck
     (buckets[category] = buckets[category] || []).push(command);
     return buckets;
   }, {});
-
-  // return Object.entries(commands).reduce((buckets: CategoryBuckets, [id, command]) => {
-  //   const [category] = id.split(':');
-  //   (buckets[category] = buckets[category] || []).push(command);
-  //   return buckets;
-  // }, {});
 }
 
 /**
@@ -411,7 +403,6 @@ export function categorizeCommands(commands: LeanCommand[], commandTrie: any) {
     });
 
     // Add sub-commands with prefixes
-    // const commandsWithPrefixes = determinePrefixes(prefixArray, commands);
     categorizedCommands.push(...determinePrefixes(prefixArray, commands));
   }
 
