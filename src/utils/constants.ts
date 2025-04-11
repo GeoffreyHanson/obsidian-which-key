@@ -178,7 +178,6 @@ export const intentMappings = [
   },
 
   // Core Plugins
-  // TODO: These need to be conditionally shown if the patter matches
   {
     prefix: ['c'],
     name: 'Canvas',
@@ -214,11 +213,4 @@ export const intentMappings = [
     icon: 'globe',
     pattern: patterns.W,
   },
-  // {
-  //   prefix: ['M'],
-  //   name: 'Miscellaneous',
-  //   id: undefined,
-  //   icon: 'circle-help',
-  //   pattern: patterns.M,
-  // },
 ];

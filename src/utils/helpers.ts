@@ -284,31 +284,30 @@ export function curateCommands(
   const curatedCommands: CuratedCommand[] = [...topLevelMappings];
 
   for (const { prefix, name, pattern, icon } of intentMappings) {
-    // Push top level intent mapping
-
+    // Group commands by intent. If a command fits multiple intents, it will be included in each bucket
     const bucket = filterCommandsByIntent(commands, pattern);
 
     if (bucket.length > 0) {
+      // Push top level intent mapping
       curatedCommands.push({ prefix, name, icon } as CuratedCommand);
-      // Push array of commands with determined prefixes
+      // Push intent bucket of commands with determined prefixes
       curatedCommands.push(...determinePrefixes(prefix, bucket));
     }
   }
 
-  // TODO: Push remaining commands to misc
-
-  log('curatedCommands', curatedCommands);
-
-  // Track curated command IDs
+  // Anything that hasn't been categorized gets pushed to misc
   const curatedIds = new Set(curatedCommands.map(command => command.id));
-  log('curatedIds', curatedIds);
+  const remainingCommands = commands.filter(command => !curatedIds.has(command.id));
 
-  const remainingCommands = new Set(commands.map(command => command.id));
-  // Loop over curatedIds, if the command has been curated, remove it from remainingCommands
-  for (const id of curatedIds) {
-    remainingCommands.delete(id);
+  if (remainingCommands.length > 0) {
+    curatedCommands.push({
+      prefix: ['M'],
+      name: 'Miscellaneous',
+      id: undefined,
+      icon: 'circle-help',
+    });
+    curatedCommands.push(...determinePrefixes(['M'], remainingCommands));
   }
-  log('remainingCommands', remainingCommands);
 
   return buildCommandTrie(curatedCommands, commandTrie);
 }
