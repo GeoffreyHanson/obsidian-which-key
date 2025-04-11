@@ -17,7 +17,7 @@ import {
   categorizeCommands,
 } from './helpers';
 import { obsidianCommands } from '../__fixtures__/obsidian-commands';
-import { patterns } from '../utils/constants';
+import { intentRegexes } from '../utils/constants';
 
 const commandsWithoutIds = shuckCommands(obsidianCommands);
 
@@ -356,7 +356,7 @@ describe('Helper Functions', () => {
         'bookmarks:unbookmark-current-view',
       ];
 
-      const filteredIds = filterCommandsByIntent(commandsWithoutIds, patterns.b).map(
+      const filteredIds = filterCommandsByIntent(commandsWithoutIds, intentRegexes.b).map(
         command => command.id
       );
 
@@ -374,7 +374,7 @@ describe('Helper Functions', () => {
         'canvas:new-file',
       ];
 
-      const filteredIds = filterCommandsByIntent(commandsWithoutIds, patterns.c).map(
+      const filteredIds = filterCommandsByIntent(commandsWithoutIds, intentRegexes.c).map(
         command => command.id
       );
 
@@ -387,7 +387,7 @@ describe('Helper Functions', () => {
     it('should filter daily notes commands', () => {
       const commandIdsToMatch = ['daily-notes', 'daily-notes:goto-next', 'daily-notes:goto-prev'];
 
-      const filteredIds = filterCommandsByIntent(commandsWithoutIds, patterns.d).map(
+      const filteredIds = filterCommandsByIntent(commandsWithoutIds, intentRegexes.d).map(
         command => command.id
       );
 
@@ -400,7 +400,7 @@ describe('Helper Functions', () => {
     it('should filter graph commands', () => {
       const commandIdsToMatch = ['graph:animate', 'graph:open', 'graph:open-local'];
 
-      const filteredIds = filterCommandsByIntent(commandsWithoutIds, patterns.g).map(
+      const filteredIds = filterCommandsByIntent(commandsWithoutIds, intentRegexes.g).map(
         command => command.id
       );
 
@@ -420,7 +420,7 @@ describe('Helper Functions', () => {
         'webviewer:search',
       ];
 
-      const filteredIds = filterCommandsByIntent(commandsWithoutIds, patterns.s).map(
+      const filteredIds = filterCommandsByIntent(commandsWithoutIds, intentRegexes.s).map(
         command => command.id
       );
 
@@ -438,7 +438,7 @@ describe('Helper Functions', () => {
         'sync:view-version-history',
       ];
 
-      const filteredIds = filterCommandsByIntent(commandsWithoutIds, patterns.S).map(
+      const filteredIds = filterCommandsByIntent(commandsWithoutIds, intentRegexes.S).map(
         command => command.id
       );
 

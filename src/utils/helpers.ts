@@ -88,11 +88,12 @@ export function extractNameFirstLetters(name: string): string[] {
   return nameWithoutCategory
     .trim()
     .split(' ')
+    .filter(word => word && word.match(/[a-zA-Z0-9]/))
     .map(word => {
-      if (!word) return '';
       // Prioritize numbers
       const number = word.match(/[0-9]/)?.[0];
       if (number) return number;
+
       return word[0]?.toLowerCase() || '';
     });
 }
