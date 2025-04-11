@@ -1288,16 +1288,4 @@ export const obsidianCommands = {
       },
     ],
   },
-  'which-key-plugin:open-sample-modal-simple': {
-    id: 'which-key-plugin:open-sample-modal-simple',
-    name: 'WhichKey: Open sample modal (simple)',
-  },
-  'which-key-plugin:sample-editor-command': {
-    id: 'which-key-plugin:sample-editor-command',
-    name: 'WhichKey: Sample editor command',
-  },
-  'which-key-plugin:open-sample-modal-complex': {
-    id: 'which-key-plugin:open-sample-modal-complex',
-    name: 'WhichKey: Open sample modal (complex)',
-  },
 };

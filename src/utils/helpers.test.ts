@@ -481,26 +481,25 @@ describe('Helper Functions', () => {
   // });
 
   describe('createCategoryBuckets', () => {
-    it('should group commands by category', () => {
-      const commands = {
-        'editor:copy': { id: 'editor:copy', name: 'Copy' },
-        'editor:paste': { id: 'editor:paste', name: 'Paste' },
-        'file:open': { id: 'file:open', name: 'Open file' },
-        'file:save': { id: 'file:save', name: 'Save file' },
-      };
+    it('should group commands by category using real data', () => {
+      const commands = shuckCommands(obsidianCommands);
 
       const result = createCategoryBuckets(commands);
 
-      expect(Object.keys(result)).toHaveLength(2);
+      expect(result).toHaveProperty('editor');
+      expect(result).toHaveProperty('workspace');
+      expect(result).toHaveProperty('app');
 
-      expect(result.editor).toHaveLength(2);
-      expect(result.file).toHaveLength(2);
+      // Test that categories contain respective commands
+      expect(result.editor.some(cmd => cmd.id === 'editor:save-file')).toBe(true);
+      expect(result.workspace.some(cmd => cmd.id === 'workspace:split-vertical')).toBe(true);
 
-      expect(result.editor[0].name).toBe('Copy');
-      expect(result.editor[1].name).toBe('Paste');
-
-      expect(result.file[0].name).toBe('Open file');
-      expect(result.file[1].name).toBe('Save file');
+      // Test that the formatting of commands is preserved
+      const saveCommand = result.editor.find(cmd => cmd.id === 'editor:save-file');
+      expect(saveCommand).toMatchObject({
+        id: 'editor:save-file',
+        name: 'Save current file',
+      });
     });
   });
 

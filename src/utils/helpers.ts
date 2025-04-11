@@ -320,7 +320,7 @@ export function curateCommands(
  */
 export function createCategoryBuckets(commands: ObsidianCommand[]): CategoryBuckets {
   return commands.reduce((buckets: CategoryBuckets, command) => {
-    const category = command?.id;
+    const category = command?.id?.split(':')[0] || '';
     (buckets[category] = buckets[category] || []).push(command);
     return buckets;
   }, {});
