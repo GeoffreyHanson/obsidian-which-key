@@ -68,6 +68,11 @@ interface CategoryMappings {
   [prefix: string]: CategoryMapping;
 }
 
+export function interceptKeyPress(event: KeyboardEvent) {
+  event.preventDefault();
+  event.stopPropagation();
+}
+
 /**
  * Extract first letters from command ID (after the colon and split by hyphens)
  * @param id - Command ID string

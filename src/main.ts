@@ -339,9 +339,9 @@ class WhichKeyUI {
  */
 class SharedState {
   private app: App;
-  private isRecording = false;
-  private currentKeySequence: string[] = [];
   private ui: WhichKeyUI;
+  currentKeySequence: string[] = [];
+  isRecording = false;
   insertMode = false;
   commandTrie: CommandTrie;
 
@@ -349,6 +349,13 @@ class SharedState {
     this.app = app;
     this.commandTrie = commandTrie;
     this.ui = ui;
+  }
+
+  startRecording() {
+    this.isRecording = true;
+    this.currentKeySequence = [];
+    const commands = this.commandTrie.getPossibleCommands();
+    this.ui.showCommands(commands);
   }
 
   private resetState() {
@@ -362,14 +369,34 @@ class SharedState {
     event.stopPropagation();
   };
 
-  // TODO: UI should be updated in editor plugin
-  updateKeySequence(event: KeyboardEvent) {
-    const { key } = event;
+  /**
+   * Handles key presses in the editor. Prevents Tab, Space, etc while recording
+   * @param event - Keyboard event
+   */
+  handleEditorKeyPress = (event: KeyboardEvent) => {
+    log('handleKeyPress', event);
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
     const editorHasFocus = activeView?.editor.hasFocus();
+    // CodeMirror's vim plugin state
+    const vim = activeView?.editor?.cm?.cm?.state;
 
-    // Ignore key presses when editing the note title or when in vim's insert mode
-    if (!editorHasFocus || this.insertMode) return;
+    // For vim, ignore key presses when editing the note title or when in insert mode
+    if (vim && (!editorHasFocus || this.insertMode)) {
+      return;
+    }
+
+    if (this.isRecording) {
+      this.updateKeySequence(event);
+    }
+    // Start recording when space is pressed and using vim
+    else if (vim && !this.insertMode && event.key === KEYS.SPACE) {
+      this.startRecording();
+      this.interceptKeyPress(event);
+    }
+  };
+
+  updateKeySequence(event: KeyboardEvent) {
+    const { key } = event;
 
     if (key === KEYS.ESCAPE) {
       this.resetState();
@@ -379,20 +406,9 @@ class SharedState {
     // Ignore shift to allow capital letters for command categories
     if (key === KEYS.SHIFT) return;
 
-    if (key === KEYS.SPACE && !this.isRecording) {
-      this.isRecording = true;
-      this.currentKeySequence = [];
-
-      // Get commands and tell UI to display them
-      const commands = this.commandTrie.getPossibleCommands();
-      this.ui.showCommands(commands);
-
-      this.interceptKeyPress(event);
-      return;
-    }
-
     // If not recording and key isn't Space, exit
     if (!this.isRecording) return;
+
     this.interceptKeyPress(event);
 
     this.currentKeySequence.push(key);
@@ -427,16 +443,13 @@ class WhichKeyEditorPlugin implements PluginValue {
 
   constructor(view: EditorView) {
     this.view = view;
-    view.dom.addEventListener('keydown', this.handleVimKeyPress, true);
+    // Needed to handle key presses inside the editor
+    view.dom.addEventListener(
+      'keydown',
+      WhichKeyEditorPlugin.sharedState.handleEditorKeyPress,
+      true
+    );
   }
-
-  /**
-   * Handle key presses outside of vim's insert mode
-   * @param event - Keyboard event
-   */
-  handleVimKeyPress = (event: KeyboardEvent) => {
-    WhichKeyEditorPlugin.sharedState.updateKeySequence(event);
-  };
 
   /**
    * Update the insert mode state
@@ -449,7 +462,11 @@ class WhichKeyEditorPlugin implements PluginValue {
   }
 
   destroy() {
-    this.view.dom.removeEventListener('keydown', this.handleVimKeyPress, true);
+    this.view.dom.removeEventListener(
+      'keydown',
+      WhichKeyEditorPlugin.sharedState.handleEditorKeyPress,
+      true
+    );
   }
 }
 
@@ -462,6 +479,20 @@ export default class WhichKey extends Plugin {
   settings: WhichKeySettings;
   sharedState: SharedState;
   commandTrie: CommandTrie;
+
+  handleGlobalKeyPress = (event: KeyboardEvent) => {
+    // Don't handle key presses when editor has focus
+    const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    const editorHasFocus = activeView?.editor?.hasFocus();
+    if (editorHasFocus) {
+      return;
+    }
+
+    // If the hotkey is pressed, update the key sequence
+    if (this.sharedState.isRecording) {
+      this.sharedState.updateKeySequence(event);
+    }
+  };
 
   async onload() {
     log('loading...');
@@ -481,6 +512,14 @@ export default class WhichKey extends Plugin {
     this.sharedState = new SharedState(this.app, this.commandTrie, ui);
 
     this.registerEditorExtension(codeMirrorPlugin(this.sharedState));
+
+    document.addEventListener('keydown', this.handleGlobalKeyPress);
+
+    this.addCommand({
+      id: 'open-which-key',
+      name: 'Open WhichKey',
+      callback: () => this.sharedState.startRecording(),
+    });
 
     // This adds a simple command that can be triggered anywhere
     this.addCommand({
