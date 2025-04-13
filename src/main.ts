@@ -1,16 +1,7 @@
-import {
-  App,
-  Editor,
-  MarkdownView,
-  Modal,
-  Plugin,
-  PluginSettingTab,
-  setIcon,
-  Setting,
-} from 'obsidian';
 import { EditorView, PluginValue, ViewPlugin, ViewUpdate } from '@codemirror/view';
+import { App, Editor, MarkdownView, Plugin, PluginSettingTab, setIcon, Setting } from 'obsidian';
 import { categorizeCommands, curateCommands, shuckCommands } from 'src/utils/helpers';
-import { KEYS, topLevelMappings, intentMappings } from './utils/constants';
+import { intentMappings, KEYS, topLevelMappings } from './utils/constants';
 
 const { log } = console;
 

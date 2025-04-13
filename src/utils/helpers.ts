@@ -147,12 +147,12 @@ export function assignPrefixesToCommands(context: PrefixAssignmentContext): Obsi
   // First try preferred prefixes, then fallback prefixes
   for (const prefixOptions of [preferredPrefixes, fallbackPrefixes]) {
     for (const prefix of prefixesToAssign) {
-      // Try to assign this prefix to an unassigned command
+      // Assign prefixes to commands without
       for (let i = 0; i < commandBucket.length; i++) {
         // Skip commands that already have a prefix
         if (commandBucket[i].prefix) continue;
 
-        // Check if this command can use this prefix with current source
+        // Check if this prefix is appropriate for the command
         if (prefixOptions[i].has(prefix.toLowerCase())) {
           commandBucket[i].prefix = [...parentPrefix, prefix];
           prefixesToAssign.delete(prefix);
