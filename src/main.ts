@@ -373,23 +373,17 @@ class SharedState {
    * Handles key presses in the editor. Prevents Tab, Space, etc while recording
    * @param event - Keyboard event
    */
-  handleEditorKeyPress = (event: KeyboardEvent) => {
-    log('handleKeyPress', event);
+  handleKeyPress = (event: KeyboardEvent) => {
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
     const editorHasFocus = activeView?.editor.hasFocus();
     // CodeMirror's vim plugin state
     const vim = activeView?.editor?.cm?.cm?.state;
 
-    // For vim, ignore key presses when editing the note title or when in insert mode
-    if (vim && (!editorHasFocus || this.insertMode)) {
-      return;
-    }
-
     if (this.isRecording) {
       this.updateKeySequence(event);
     }
     // Start recording when space is pressed and using vim
-    else if (vim && !this.insertMode && event.key === KEYS.SPACE) {
+    else if (vim && editorHasFocus && !this.insertMode && event.key === KEYS.SPACE) {
       this.startRecording();
       this.interceptKeyPress(event);
     }
@@ -398,6 +392,7 @@ class SharedState {
   updateKeySequence(event: KeyboardEvent) {
     const { key } = event;
 
+    // Reset state when escape is pressed
     if (key === KEYS.ESCAPE) {
       this.resetState();
       return;
@@ -406,11 +401,7 @@ class SharedState {
     // Ignore shift to allow capital letters for command categories
     if (key === KEYS.SHIFT) return;
 
-    // If not recording and key isn't Space, exit
-    if (!this.isRecording) return;
-
     this.interceptKeyPress(event);
-
     this.currentKeySequence.push(key);
 
     // Show possible completions
@@ -444,11 +435,7 @@ class WhichKeyEditorPlugin implements PluginValue {
   constructor(view: EditorView) {
     this.view = view;
     // Needed to handle key presses inside the editor
-    view.dom.addEventListener(
-      'keydown',
-      WhichKeyEditorPlugin.sharedState.handleEditorKeyPress,
-      true
-    );
+    view.dom.addEventListener('keydown', WhichKeyEditorPlugin.sharedState.handleKeyPress, true);
   }
 
   /**
@@ -464,7 +451,7 @@ class WhichKeyEditorPlugin implements PluginValue {
   destroy() {
     this.view.dom.removeEventListener(
       'keydown',
-      WhichKeyEditorPlugin.sharedState.handleEditorKeyPress,
+      WhichKeyEditorPlugin.sharedState.handleKeyPress,
       true
     );
   }
@@ -513,7 +500,7 @@ export default class WhichKey extends Plugin {
 
     this.registerEditorExtension(codeMirrorPlugin(this.sharedState));
 
-    document.addEventListener('keydown', this.handleGlobalKeyPress);
+    document.addEventListener('keydown', this.handleGlobalKeyPress, true);
 
     this.addCommand({
       id: 'open-which-key',
@@ -566,7 +553,9 @@ export default class WhichKey extends Plugin {
     this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
   }
 
-  onunload() {}
+  onunload() {
+    document.removeEventListener('keydown', this.handleGlobalKeyPress, true);
+  }
 
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
