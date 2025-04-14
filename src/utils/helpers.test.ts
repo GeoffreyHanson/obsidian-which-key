@@ -679,79 +679,68 @@ describe('Helper Functions', () => {
     });
   });
 
-  // describe('categorizeCommands', () => {
-  // it('should assign all categories to buckets with prefixes', () => {
-  //   const leanCommands = shuckCommands(obsidianCommands);
-  //   const result = categorizeCommands(leanCommands, new CommandTrie());
+  describe('categorizeCommands', () => {
+    it('should create and return all expected categories', () => {
+      const leanCommands = shuckCommands(obsidianCommands);
+      const trie = new CommandTrie();
+      const result = categorizeCommands(leanCommands, trie);
 
-  //   // Get top level commands (categories)
-  //   const topLevelCommands = result.commands.filter(
-  //     (cmd: CuratedCommand) => cmd.prefix?.length === 1
-  //   );
-  //   const subCommands = result.commands.filter((cmd: CuratedCommand) => cmd.prefix?.length === 2);
+      // Get all top-level categories
+      const categories = result.getPossibleCommands();
 
-  //   // Verify we have both top level and sub commands
-  //   expect(topLevelCommands.length).toBeGreaterThan(0);
-  //   expect(subCommands.length).toBeGreaterThan(0);
+      // Define expected categories based on the command structure
+      const expectedCategories = [
+        'App',
+        'Audio recorder',
+        'Backlink',
+        'Bookmarks',
+        'Canvas',
+        'Command palette',
+        'Daily notes',
+        'Editor',
+        'File explorer',
+        'File recovery',
+        'Global search',
+        'Graph',
+        'Insert current date',
+        'Insert current time',
+        'Insert template',
+        'Markdown',
+        'Markdown importer',
+        'Note composer',
+        'Open with default app',
+        'Outgoing links',
+        'Outline',
+        'Properties',
+        'Publish',
+        'Random note',
+        'Slides',
+        'Switcher',
+        'Sync',
+        'Tag pane',
+        'Templater obsidian',
+        'Theme',
+        'Webviewer',
+        'Window',
+        'Workspace',
+        'Workspaces',
+        'Zk prefixer',
+      ];
 
-  //   // Verify each category has a corresponding top-level command with a prefix
-  //   const assignedCategories = new Set(subCommands.map((cmd: CuratedCommand) => cmd.prefix[0]));
+      // Verify each expected category exists
+      expectedCategories.forEach(categoryName => {
+        expect(categories).toContainEqual(
+          expect.objectContaining({
+            command: expect.objectContaining({
+              name: categoryName,
+            }),
+          })
+        );
+      });
 
-  //   // Every category should have a prefix assigned
-  //   expect(assignedCategories.size).toBeGreaterThan(0);
-
-  //   // Verify each sub-command has a valid parent category prefix
-  //   subCommands.forEach((cmd: CuratedCommand) => {
-  //     expect(assignedCategories.has(cmd.prefix[0])).toBe(true);
-  //   });
-
-  //   // Verify no duplicate prefixes at category level
-  //   const uniquePrefixes = new Set(topLevelCommands.map((cmd: CuratedCommand) => cmd.prefix[0]));
-  //   expect(uniquePrefixes.size).toBe(topLevelCommands.length);
-
-  //   // Verify each command has required properties
-  //   result.commands.forEach((cmd: CuratedCommand) => {
-  //     expect(cmd).toHaveProperty('prefix');
-  //     expect(cmd).toHaveProperty('name');
-  //     expect(Array.isArray(cmd.prefix)).toBe(true);
-  //     expect(cmd.prefix.length).toBeGreaterThan(0);
-  //   });
-  // });
-
-  // it('should assign prefixes to all commands within each category', () => {
-  //   const result = categorizeCommands(obsidianCommands, MockCommandTrie);
-
-  //   // Group commands by their top-level category prefix
-  //   const commandsByCategory = new Map<string, CuratedCommand[]>();
-  //   result.commands.forEach((cmd: CuratedCommand) => {
-  //     if (!cmd.prefix || cmd.prefix.length === 0) return;
-  //     const categoryPrefix = cmd.prefix[0];
-  //     if (!commandsByCategory.has(categoryPrefix)) {
-  //       commandsByCategory.set(categoryPrefix, []);
-  //     }
-  //     commandsByCategory.get(categoryPrefix)?.push(cmd);
-  //   });
-
-  //   // For each category, verify all commands have complete prefixes
-  //   commandsByCategory.forEach((commands, categoryPrefix) => {
-  //     // Category should have at least one command
-  //     expect(commands.length).toBeGreaterThan(0);
-
-  //     // All commands in category should have a complete prefix (length 2)
-  //     const unassignedCommands = commands.filter(cmd => !cmd.prefix || cmd.prefix.length !== 2);
-  //     if (unassignedCommands.length > 0) {
-  //       console.log(
-  //         `Category ${categoryPrefix} has commands without complete prefixes:`,
-  //         unassignedCommands.map(cmd => cmd.name)
-  //       );
-  //     }
-  //     expect(unassignedCommands.length).toBe(0);
-
-  //     // All commands should have the category prefix as their first prefix
-  //     commands.forEach(cmd => {
-  //       expect(cmd.prefix[0]).toBe(categoryPrefix);
-  //     });
-  //   });
-  // });
-  // });
+      // Verify we found all categories (no extras or missing ones)
+      const foundCategoryNames = categories.map(cat => cat.command.name);
+      expect(foundCategoryNames.sort()).toEqual(expectedCategories.sort());
+    });
+  });
 });
