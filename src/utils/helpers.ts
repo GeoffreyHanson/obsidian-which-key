@@ -262,7 +262,7 @@ export function filterCommandsByIntent(commands: LeanCommand[], pattern: RegExp)
 export function buildCommandTrie(commands: CuratedCommand[], commandTrie: any): any {
   commands.forEach(command => {
     if (command.prefix) {
-      commandTrie.insertVimCommand(command);
+      commandTrie.insertCommand(command);
     } else {
       console.log('Skipping command without prefix:', command.name);
     }

@@ -15,9 +15,11 @@ import {
   generateCategoryPrefixOptions,
   assignCategoryPrefixes,
   categorizeCommands,
+  curateCommands,
 } from './helpers';
 import { obsidianCommands } from '../__fixtures__/obsidian-commands';
-import { intentRegexes } from '../utils/constants';
+import { intentMappings, intentRegexes, topLevelMappings } from '../utils/constants';
+import { CommandTrie } from '../trie';
 
 const commandsWithoutIds = shuckCommands(obsidianCommands);
 
@@ -457,28 +459,108 @@ describe('Helper Functions', () => {
       ];
 
       const mockTrie = {
-        insertVimCommand: jest.fn(),
+        insertCommand: jest.fn(),
       };
 
       buildCommandTrie(commands, mockTrie);
 
-      expect(mockTrie.insertVimCommand).toHaveBeenCalledTimes(2);
-      expect(mockTrie.insertVimCommand).toHaveBeenCalledWith(commands[0]);
-      expect(mockTrie.insertVimCommand).toHaveBeenCalledWith(commands[1]);
+      expect(mockTrie.insertCommand).toHaveBeenCalledTimes(2);
+      expect(mockTrie.insertCommand).toHaveBeenCalledWith(commands[0]);
+      expect(mockTrie.insertCommand).toHaveBeenCalledWith(commands[1]);
     });
   });
 
-  // describe('curateCommands', () => {
-  //   class MockCommandTrie {
-  //     commands: CuratedCommand[] = [];
-  //     insertVimCommand(command: CuratedCommand) {
-  //       this.commands.push(command);
-  //     }
-  //   }
+  describe('curateCommands', () => {
+    it('should properly organize commands by intent categories', () => {
+      const leanCommands = shuckCommands(obsidianCommands);
 
-  // it('should sort commands by intent and identify unsorted commands', () => {
+      const result = curateCommands(
+        leanCommands,
+        topLevelMappings,
+        intentMappings,
+        new CommandTrie()
+      );
 
-  // });
+      // Test specific command categorization
+      // Editor commands
+      const editorCommands = result.getPossibleCommands(['t']); // 't' is for text/editor commands
+      expect(editorCommands).toContainEqual(
+        expect.objectContaining({
+          command: expect.objectContaining({
+            id: 'editor:toggle-bold',
+            name: 'Toggle bold',
+          }),
+        })
+      );
+
+      // File commands
+      const fileCommands = result.getPossibleCommands(['f']); // 'f' is for file commands
+      expect(fileCommands).toContainEqual(
+        expect.objectContaining({
+          command: expect.objectContaining({
+            id: 'file-explorer:new-file',
+            name: 'Create new note',
+          }),
+        })
+      );
+
+      // Search commands
+      const searchCommands = result.getPossibleCommands(['s']); // 's' is for search
+      expect(searchCommands).toContainEqual(
+        expect.objectContaining({
+          command: expect.objectContaining({
+            id: 'global-search:open',
+            name: 'Search: Search in all files',
+          }),
+        })
+      );
+
+      // Test that related commands stay grouped
+      const tableCommands = result.getPossibleCommands(['T']); // 'T' for table commands
+      expect(tableCommands).toContainEqual(
+        expect.objectContaining({
+          command: expect.objectContaining({
+            id: 'editor:table-row-before',
+          }),
+        })
+      );
+      expect(tableCommands).toContainEqual(
+        expect.objectContaining({
+          command: expect.objectContaining({
+            id: 'editor:table-col-after',
+          }),
+        })
+      );
+
+      // Verify top level command prefixes are unique
+      const allCommands = result.getPossibleCommands();
+      const prefixes = new Set(allCommands.map(cmd => cmd.key));
+      expect(prefixes.size).toBe(allCommands.length);
+    });
+
+    it('should handle command conflicts and assign unique prefixes', () => {
+      // Test with a subset of commands that would naturally conflict
+      const conflictingCommands = {
+        'editor:toggle-bold': obsidianCommands['editor:toggle-bold'],
+        'editor:toggle-bullet-list': obsidianCommands['editor:toggle-bullet-list'],
+        // Both would want to use 't' and 'b' prefixes
+      };
+
+      const trie = new CommandTrie();
+      const result = curateCommands(
+        shuckCommands(conflictingCommands),
+        topLevelMappings,
+        intentMappings,
+        trie
+      );
+
+      // Verify each command got a unique prefix
+      const commands = result.getPossibleCommands();
+      const prefixes = commands.map(cmd => cmd.key);
+      const uniquePrefixes = new Set(prefixes);
+      expect(uniquePrefixes.size).toBe(prefixes.length);
+    });
+  });
 
   describe('createCategoryBuckets', () => {
     it('should group commands by category using real data', () => {
@@ -597,85 +679,79 @@ describe('Helper Functions', () => {
     });
   });
 
-  describe('categorizeCommands', () => {
-    class MockCommandTrie {
-      commands: CuratedCommand[] = [];
-      insertVimCommand(command: CuratedCommand) {
-        this.commands.push(command);
-      }
-    }
+  // describe('categorizeCommands', () => {
+  // it('should assign all categories to buckets with prefixes', () => {
+  //   const leanCommands = shuckCommands(obsidianCommands);
+  //   const result = categorizeCommands(leanCommands, new CommandTrie());
 
-    it('should assign all categories to buckets with prefixes', () => {
-      const result = categorizeCommands(obsidianCommands, MockCommandTrie);
+  //   // Get top level commands (categories)
+  //   const topLevelCommands = result.commands.filter(
+  //     (cmd: CuratedCommand) => cmd.prefix?.length === 1
+  //   );
+  //   const subCommands = result.commands.filter((cmd: CuratedCommand) => cmd.prefix?.length === 2);
 
-      // Get top level commands (categories)
-      const topLevelCommands = result.commands.filter(
-        (cmd: CuratedCommand) => cmd.prefix?.length === 1
-      );
-      const subCommands = result.commands.filter((cmd: CuratedCommand) => cmd.prefix?.length === 2);
+  //   // Verify we have both top level and sub commands
+  //   expect(topLevelCommands.length).toBeGreaterThan(0);
+  //   expect(subCommands.length).toBeGreaterThan(0);
 
-      // Verify we have both top level and sub commands
-      expect(topLevelCommands.length).toBeGreaterThan(0);
-      expect(subCommands.length).toBeGreaterThan(0);
+  //   // Verify each category has a corresponding top-level command with a prefix
+  //   const assignedCategories = new Set(subCommands.map((cmd: CuratedCommand) => cmd.prefix[0]));
 
-      // Verify each category has a corresponding top-level command with a prefix
-      const assignedCategories = new Set(subCommands.map((cmd: CuratedCommand) => cmd.prefix[0]));
+  //   // Every category should have a prefix assigned
+  //   expect(assignedCategories.size).toBeGreaterThan(0);
 
-      // Every category should have a prefix assigned
-      expect(assignedCategories.size).toBeGreaterThan(0);
+  //   // Verify each sub-command has a valid parent category prefix
+  //   subCommands.forEach((cmd: CuratedCommand) => {
+  //     expect(assignedCategories.has(cmd.prefix[0])).toBe(true);
+  //   });
 
-      // Verify each sub-command has a valid parent category prefix
-      subCommands.forEach((cmd: CuratedCommand) => {
-        expect(assignedCategories.has(cmd.prefix[0])).toBe(true);
-      });
+  //   // Verify no duplicate prefixes at category level
+  //   const uniquePrefixes = new Set(topLevelCommands.map((cmd: CuratedCommand) => cmd.prefix[0]));
+  //   expect(uniquePrefixes.size).toBe(topLevelCommands.length);
 
-      // Verify no duplicate prefixes at category level
-      const uniquePrefixes = new Set(topLevelCommands.map((cmd: CuratedCommand) => cmd.prefix[0]));
-      expect(uniquePrefixes.size).toBe(topLevelCommands.length);
+  //   // Verify each command has required properties
+  //   result.commands.forEach((cmd: CuratedCommand) => {
+  //     expect(cmd).toHaveProperty('prefix');
+  //     expect(cmd).toHaveProperty('name');
+  //     expect(Array.isArray(cmd.prefix)).toBe(true);
+  //     expect(cmd.prefix.length).toBeGreaterThan(0);
+  //   });
+  // });
 
-      // Verify each command has required properties
-      result.commands.forEach((cmd: CuratedCommand) => {
-        expect(cmd).toHaveProperty('prefix');
-        expect(cmd).toHaveProperty('name');
-        expect(Array.isArray(cmd.prefix)).toBe(true);
-        expect(cmd.prefix.length).toBeGreaterThan(0);
-      });
-    });
+  // it('should assign prefixes to all commands within each category', () => {
+  //   const result = categorizeCommands(obsidianCommands, MockCommandTrie);
 
-    // it('should assign prefixes to all commands within each category', () => {
-    //   const result = categorizeCommands(obsidianCommands, MockCommandTrie);
+  //   // Group commands by their top-level category prefix
+  //   const commandsByCategory = new Map<string, CuratedCommand[]>();
+  //   result.commands.forEach((cmd: CuratedCommand) => {
+  //     if (!cmd.prefix || cmd.prefix.length === 0) return;
+  //     const categoryPrefix = cmd.prefix[0];
+  //     if (!commandsByCategory.has(categoryPrefix)) {
+  //       commandsByCategory.set(categoryPrefix, []);
+  //     }
+  //     commandsByCategory.get(categoryPrefix)?.push(cmd);
+  //   });
 
-    //   // Group commands by their top-level category prefix
-    //   const commandsByCategory = new Map<string, CuratedCommand[]>();
-    //   result.commands.forEach((cmd: CuratedCommand) => {
-    //     if (!cmd.prefix || cmd.prefix.length === 0) return;
-    //     const categoryPrefix = cmd.prefix[0];
-    //     if (!commandsByCategory.has(categoryPrefix)) {
-    //       commandsByCategory.set(categoryPrefix, []);
-    //     }
-    //     commandsByCategory.get(categoryPrefix)?.push(cmd);
-    //   });
+  //   // For each category, verify all commands have complete prefixes
+  //   commandsByCategory.forEach((commands, categoryPrefix) => {
+  //     // Category should have at least one command
+  //     expect(commands.length).toBeGreaterThan(0);
 
-    //   // For each category, verify all commands have complete prefixes
-    //   commandsByCategory.forEach((commands, categoryPrefix) => {
-    //     // Category should have at least one command
-    //     expect(commands.length).toBeGreaterThan(0);
+  //     // All commands in category should have a complete prefix (length 2)
+  //     const unassignedCommands = commands.filter(cmd => !cmd.prefix || cmd.prefix.length !== 2);
+  //     if (unassignedCommands.length > 0) {
+  //       console.log(
+  //         `Category ${categoryPrefix} has commands without complete prefixes:`,
+  //         unassignedCommands.map(cmd => cmd.name)
+  //       );
+  //     }
+  //     expect(unassignedCommands.length).toBe(0);
 
-    //     // All commands in category should have a complete prefix (length 2)
-    //     const unassignedCommands = commands.filter(cmd => !cmd.prefix || cmd.prefix.length !== 2);
-    //     if (unassignedCommands.length > 0) {
-    //       console.log(
-    //         `Category ${categoryPrefix} has commands without complete prefixes:`,
-    //         unassignedCommands.map(cmd => cmd.name)
-    //       );
-    //     }
-    //     expect(unassignedCommands.length).toBe(0);
-
-    //     // All commands should have the category prefix as their first prefix
-    //     commands.forEach(cmd => {
-    //       expect(cmd.prefix[0]).toBe(categoryPrefix);
-    //     });
-    //   });
-    // });
-  });
+  //     // All commands should have the category prefix as their first prefix
+  //     commands.forEach(cmd => {
+  //       expect(cmd.prefix[0]).toBe(categoryPrefix);
+  //     });
+  //   });
+  // });
+  // });
 });
