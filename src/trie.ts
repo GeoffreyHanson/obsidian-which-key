@@ -1,6 +1,5 @@
 const { log } = console;
-import { WhichKeyCommand, CategorizedCommand } from './types';
-import { KEYS } from './utils/constants';
+import { WhichKeyCommand } from './types';
 
 export class TrieNode {
   children: Record<string, TrieNode>;
@@ -66,92 +65,16 @@ export class CommandTrie {
       }
     });
 
-    // log('possible commands:', possibilities);
     return possibilities;
   }
 
-  // Inserts nested commands into the trie under each category
-  insertCommands(category: string, commands: Record<string, CategorizedCommand>) {
-    // Get first letter of each word as prefix options
-    const primaryCategoryOptions = category
-      .split('-')
-      .map(word => [word[0].toLowerCase(), word[0].toUpperCase()])
-      .flat();
-
-    // Letters of the first word except for the first
-    const secondaryCategoryOptions = category.split('-')[0].split('').slice(1);
-
-    const categoryPrefixOptions = [...primaryCategoryOptions, ...secondaryCategoryOptions];
-
-    const current = this.root;
-    let categoryNode = null;
-    let foundCategory = false;
-
-    for (const prefix of categoryPrefixOptions) {
-      if (!(prefix in current.children)) {
-        current.children[prefix] = new TrieNode();
-        categoryNode = current.children[prefix];
-
-        categoryNode.name = category;
-        categoryNode.id = undefined;
-        categoryNode.isEndOfCommand = false;
-
-        foundCategory = true;
-        break;
-      }
-    }
-
-    if (!foundCategory) {
-      log(`Category skipped - no available prefix: ${category}`);
-      return;
-    }
-
-    // Insert commands into the category node
-    Object.entries(commands).forEach(([abvCommandName, command]) => {
-      // const sequenceOptions = command.name.split(' ').map(word => word[0].toLowerCase());
-      const primaryPrefixOptions = command.name
-        .split(KEYS.SPACE)
-        .map(word => [word[0].toLowerCase(), word[0].toUpperCase()])
-        .flat();
-
-      const secondaryPrefixOption = command.name.split(KEYS.SPACE)[0].split('').slice(1);
-
-      const sequenceOptions = [...primaryPrefixOptions, ...secondaryPrefixOption];
-
-      let current = categoryNode;
-
-      if (!current) {
-        log(`Command skipped - category node missing: ${category}:${abvCommandName}`);
-        return; // Skip if category node doesn't exist
-      }
-
-      // Find the first available sequence option
-      let foundCommandSlot = false;
-
-      for (const prefix of sequenceOptions) {
-        // Check if this slot is available
-        if (!(prefix in current.children)) {
-          // Found an open slot, create the node
-          current.children[prefix] = new TrieNode();
-          current = current.children[prefix];
-          foundCommandSlot = true;
-          break; // Exit loop after finding the first available slot
-        }
-      }
-
-      if (!foundCommandSlot) {
-        log(`Command skipped - no available prefix: ${category}:${abvCommandName}`);
-        return;
-      }
-
-      // Now set the command properties on the current node
-      current.name = command.name;
-      current.id = command.id;
-      current.isEndOfCommand = true;
-    });
-  }
-
-  // insertCommand({ prefix, name, commandId }) {
+  /**
+   * Insert a command into the trie
+   * @param name - Command name
+   * @param id - Command id
+   * @param icon - Command icon
+   * @param prefix - Command prefix
+   */
   insertCommand({
     name,
     id,
@@ -177,7 +100,6 @@ export class CommandTrie {
     current.name = name;
     current.id = id || undefined;
     current.icon = icon || 'keyboard';
-    // current.isEndOfCommand = !!id;
     current.isEndOfCommand = !!current.children;
   }
 }
