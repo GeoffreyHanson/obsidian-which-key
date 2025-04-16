@@ -3,7 +3,7 @@ import { App, MarkdownView, Plugin, PluginSettingTab, setIcon, Setting } from 'o
 import { categorizeCommands, curateCommands, shuckCommands } from 'src/utils/helpers';
 import { intentMappings, KEYS, topLevelMappings } from './utils/constants';
 import { ObsidianCommands, WhichKeyCommand } from './types';
-import { CommandTrie } from './trie';
+import { CommandTrie } from './lib/trie';
 
 const { log } = console;
 

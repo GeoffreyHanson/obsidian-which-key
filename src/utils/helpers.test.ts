@@ -22,7 +22,7 @@ import {
 } from '../types';
 import { obsidianCommands } from '../__fixtures__/obsidian-commands';
 import { intentMappings, intentRegexes, topLevelMappings } from '../utils/constants';
-import { CommandTrie } from '../trie';
+import { CommandTrie } from '../lib/trie';
 
 const commandsWithoutIds = shuckCommands(obsidianCommands);
 
