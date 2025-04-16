@@ -19,18 +19,6 @@ export interface CategorizedCommand {
 export interface ObsidianCommand {
   id: string;
   name: string;
-  prefix?: string[];
-  icon?: string;
-  hotkeys?: { modifiers: string[]; key: string }[];
-  allowProperties?: boolean;
-  allowPreview?: boolean;
-  repeatable?: boolean;
-  showOnMobileToolbar?: boolean;
-} // Define types for Obsidian commands
-
-export interface ObsidianCommand {
-  id: string;
-  name: string;
   icon?: string;
   hotkeys?: { modifiers: string[]; key: string }[];
   callback?: (...args: any[]) => any;
@@ -81,15 +69,17 @@ export interface CuratedCommand {
   allowPreview?: boolean;
   repeatable?: boolean;
   showOnMobileToolbar?: boolean;
-} /** Category commands */
+}
 
+/** Category commands */
 export interface CategoryCommand {
   name: string;
   prefix: string[];
   id: undefined;
   icon?: string;
-} /** Intent buckets for curated commands */
+}
 
+/** Intent buckets for curated commands */
 export interface IntentMapping {
   prefix: string[];
   name: string;

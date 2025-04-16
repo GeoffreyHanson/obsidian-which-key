@@ -14,7 +14,12 @@ import {
   categorizeCommands,
   curateCommands,
 } from './helpers';
-import { type PrefixAssignmentContext, type CuratedCommand, type ObsidianCommand } from '../types';
+import {
+  type PrefixAssignmentContext,
+  type CuratedCommand,
+  type ObsidianCommand,
+  LeanCommand,
+} from '../types';
 import { obsidianCommands } from '../__fixtures__/obsidian-commands';
 import { intentMappings, intentRegexes, topLevelMappings } from '../utils/constants';
 import { CommandTrie } from '../trie';
@@ -183,7 +188,7 @@ describe('Helper Functions', () => {
     });
 
     it('should skip commands that already have a prefix', () => {
-      const commands: ObsidianCommand[] = [
+      const commands: LeanCommand[] = [
         { id: 'cmd:first', name: 'First Command', prefix: ['x', 'y'] },
         { id: 'cmd:second', name: 'Second Command' },
       ];
@@ -287,15 +292,35 @@ describe('Helper Functions', () => {
   describe('shuckCommands', () => {
     it('should shuck key and keep value', () => {
       const rawCommands = {
-        cmd1: { name: 'Command 1', id: 'cmd1', icon: 'icon1', hotkeys: ['Ctrl+A'] },
-        cmd2: { name: 'Command 2', id: 'cmd2', icon: 'icon2', hotkeys: ['Ctrl+B'] },
+        cmd1: {
+          name: 'Command 1',
+          id: 'cmd1',
+          icon: 'icon1',
+          hotkeys: [{ modifiers: ['Ctrl'], key: 'A' }],
+        },
+        cmd2: {
+          name: 'Command 2',
+          id: 'cmd2',
+          icon: 'icon2',
+          hotkeys: [{ modifiers: ['Ctrl'], key: 'B' }],
+        },
       };
 
       const result = shuckCommands(rawCommands);
 
       expect(result).toEqual([
-        { name: 'Command 1', id: 'cmd1', icon: 'icon1', hotkeys: ['Ctrl+A'] },
-        { name: 'Command 2', id: 'cmd2', icon: 'icon2', hotkeys: ['Ctrl+B'] },
+        {
+          name: 'Command 1',
+          id: 'cmd1',
+          icon: 'icon1',
+          hotkeys: [{ modifiers: ['Ctrl'], key: 'A' }],
+        },
+        {
+          name: 'Command 2',
+          id: 'cmd2',
+          icon: 'icon2',
+          hotkeys: [{ modifiers: ['Ctrl'], key: 'B' }],
+        },
       ]);
     });
   });
