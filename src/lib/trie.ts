@@ -1,5 +1,5 @@
 const { log } = console;
-import { WhichKeyCommand } from './types';
+import { WhichKeyCommand } from '../types';
 
 export class TrieNode {
   children: Record<string, TrieNode>;
@@ -52,19 +52,17 @@ export class CommandTrie {
     }
 
     // Get all possible children from current node
-    const possibilities: Array<{ key: string; command: WhichKeyCommand }> = [];
+    const possibilities: { key: string; command: WhichKeyCommand }[] = [];
     Object.entries(current.children).forEach(([key, node]) => {
       possibilities.push({
         key,
         command: {
-          name: node.name,
+          name: node.name || '',
           id: node.id,
           icon: node.icon,
         },
       });
     });
-
-    log('possibilities', possibilities);
 
     return possibilities;
   }
