@@ -1,34 +1,14 @@
 import { EditorView, PluginValue, ViewPlugin, ViewUpdate } from '@codemirror/view';
-import { App, Editor, MarkdownView, Plugin, PluginSettingTab, setIcon, Setting } from 'obsidian';
+import { App, MarkdownView, Plugin, PluginSettingTab, setIcon, Setting } from 'obsidian';
 import { categorizeCommands, curateCommands, shuckCommands } from 'src/utils/helpers';
 import { intentMappings, KEYS, topLevelMappings } from './utils/constants';
-import { CategorizedCommand, WhichKeyCommand } from './types';
+import { ObsidianCommands, WhichKeyCommand } from './types';
 import { CommandTrie } from './trie';
 
 const { log } = console;
 
 interface WhichKeySettings {
   categorizedCommands: boolean;
-}
-
-// Define types for Obsidian commands
-interface ObsidianCommand {
-  id: string;
-  name: string;
-  icon?: string;
-  hotkeys?: string[];
-  callback?: (...args: any[]) => any;
-  editorCallback?: (editor: Editor, view: MarkdownView) => any;
-  checkCallback?: (checking: boolean) => boolean | void;
-}
-
-interface ObsidianCommands {
-  commands: Record<string, ObsidianCommand>;
-  executeCommandById(id: string): boolean;
-}
-
-interface CategorizedCommands {
-  [category: string]: Record<string, CategorizedCommand>;
 }
 
 // Extend the App interface to include commands
@@ -43,13 +23,8 @@ const DEFAULT_SETTINGS: WhichKeySettings = {
 };
 
 class WhichKeyUI {
-  private app: App;
   private container: HTMLElement;
   visible = false;
-
-  constructor(app: App) {
-    this.app = app;
-  }
 
   private createContainer() {
     this.container = document.createElement('div');
@@ -114,7 +89,7 @@ class WhichKeyUI {
         cmdEl.appendChild(arrowEl);
         setIcon(arrowEl, 'arrow-right');
         cmdEl.appendChild(iconEl);
-        setIcon(iconEl, lucideIcon);
+        if (lucideIcon) setIcon(iconEl, lucideIcon);
         cmdEl.appendChild(nameEl);
 
         commandsEl.appendChild(cmdEl);
@@ -172,7 +147,7 @@ class SharedState {
   handleKeyPress = (event: KeyboardEvent) => {
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
     const editorHasFocus = activeView?.editor.hasFocus();
-    // CodeMirror's vim plugin state
+    // @ts-ignore - accessing internal CodeMirror state
     const vim = activeView?.editor?.cm?.cm?.state;
 
     if (this.isRecording) {
@@ -291,8 +266,7 @@ export default class WhichKey extends Plugin {
       : curateCommands(leanCommands, topLevelMappings, intentMappings, new CommandTrie());
 
     // Initialize shared state with the command trie
-    const ui = new WhichKeyUI(this.app);
-    this.sharedState = new SharedState(this.app, this.commandTrie, ui);
+    this.sharedState = new SharedState(this.app, this.commandTrie, new WhichKeyUI());
 
     this.registerEditorExtension(codeMirrorPlugin(this.sharedState));
 

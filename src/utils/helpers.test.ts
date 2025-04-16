@@ -5,9 +5,6 @@ import {
   extractNameRemainingLetters,
   generateSortedPrefixes,
   assignPrefixesToCommands,
-  type PrefixAssignmentContext,
-  type ObsidianCommand,
-  type CuratedCommand,
   shuckCommands as shuckCommands,
   buildCommandTrie,
   filterCommandsByIntent,
@@ -17,6 +14,7 @@ import {
   categorizeCommands,
   curateCommands,
 } from './helpers';
+import { type PrefixAssignmentContext, type CuratedCommand, type ObsidianCommand } from '../types';
 import { obsidianCommands } from '../__fixtures__/obsidian-commands';
 import { intentMappings, intentRegexes, topLevelMappings } from '../utils/constants';
 import { CommandTrie } from '../trie';
@@ -739,7 +737,7 @@ describe('Helper Functions', () => {
       });
 
       // Verify we found all categories (no extras or missing ones)
-      const foundCategoryNames = categories.map(cat => cat.command.name);
+      const foundCategoryNames = categories.map(category => category.command.name);
       expect(foundCategoryNames.sort()).toEqual(expectedCategories.sort());
     });
   });

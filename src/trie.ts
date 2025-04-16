@@ -13,6 +13,7 @@ export class TrieNode {
     this.isEndOfCommand = false;
   }
 }
+
 export class CommandTrie {
   root: TrieNode;
 

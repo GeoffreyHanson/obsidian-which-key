@@ -24,10 +24,10 @@
       "jest"
     ],
     "paths": {
-      "@/*": ["src/*"],
       "@tests/*": ["tests/*"],
       "@utils/*": ["src/utils/*"],
-      "@fixtures/*": ["src/__fixtures__/*"]
+      "@fixtures/*": ["src/__fixtures__/*"],
+      "@types/*": ["src/types/*"]
     }
   },
   "include": [
