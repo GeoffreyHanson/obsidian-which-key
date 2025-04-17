@@ -1,5 +1,5 @@
 const { log } = console;
-import { WhichKeyCommand } from '../types';
+import { PossibleCommands } from '../types';
 
 export class TrieNode {
   children: Record<string, TrieNode>;
@@ -38,7 +38,7 @@ export class CommandTrie {
   }
 
   /** Get all possible completions for a prefix */
-  getPossibleCommands(prefix?: string[]): Array<{ key: string; command: WhichKeyCommand }> {
+  getPossibleCommands(prefix?: string[]): PossibleCommands {
     let current = this.root;
 
     // If prefix exists, walk down to the prefix node
@@ -52,7 +52,7 @@ export class CommandTrie {
     }
 
     // Get all possible children from current node
-    const possibilities: { key: string; command: WhichKeyCommand }[] = [];
+    const possibilities: PossibleCommands = [];
     Object.entries(current.children).forEach(([key, node]) => {
       possibilities.push({
         key,

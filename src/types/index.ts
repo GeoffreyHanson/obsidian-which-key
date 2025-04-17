@@ -1,12 +1,17 @@
 import { Editor, MarkdownView } from 'obsidian';
 
 // Define types for the WhichKey mappings
-export interface WhichKeyCommand {
+export interface CommandNode {
   name: string;
   id?: string;
   icon?: string;
-  children?: Record<string, WhichKeyCommand>;
+  children?: Record<string, CommandNode>;
 }
+
+export type PossibleCommands = {
+  key: string;
+  command: CommandNode;
+}[];
 
 export interface CategorizedCommand {
   name: string;

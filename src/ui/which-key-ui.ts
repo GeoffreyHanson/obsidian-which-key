@@ -1,6 +1,6 @@
 import { setIcon } from 'obsidian';
 import { KEYS } from '../utils/constants';
-import { WhichKeyCommand } from '../types';
+import { CommandNode } from '../types';
 
 export class WhichKeyUI {
   private container: HTMLElement;
@@ -27,7 +27,7 @@ export class WhichKeyUI {
    * @param keysPressed - Keys pressed
    */
   showCommands(
-    possibleCommands: Array<{ key: string; command: WhichKeyCommand }>,
+    possibleCommands: Array<{ key: string; command: CommandNode }>,
     keysPressed?: string[]
   ) {
     keysPressed = keysPressed ? ['Leader', ...keysPressed] : ['Leader'];

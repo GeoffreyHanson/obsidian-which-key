@@ -9,16 +9,6 @@ import { DEFAULT_SETTINGS, WhichKeySettings, WhichKeySettingsTab } from './setti
 
 const { log } = console;
 
-// Extend the App interface to include commands
-declare module 'obsidian' {
-  interface App {
-    commands: {
-      commands: Record<string, any>;
-      executeCommandById(id: string): boolean;
-    };
-  }
-}
-
 export default class WhichKey extends Plugin {
   settings: WhichKeySettings;
   sharedState: SharedState;
@@ -39,11 +29,11 @@ export default class WhichKey extends Plugin {
   };
 
   async onload() {
-    log('loading...');
     await this.loadSettings();
 
     log(this.app);
 
+    // @ts-ignore - Property for all commands
     const leanCommands = shuckCommands(this.app.commands.commands);
 
     // Create the command trie
