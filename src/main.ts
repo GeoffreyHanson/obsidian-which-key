@@ -4,7 +4,7 @@ import { intentMappings, topLevelMappings } from './utils/constants';
 import { CommandTrie } from './lib/trie';
 import { WhichKeyUI } from './ui/which-key-ui';
 import { SharedState } from './state/shared-state';
-import { codeMirrorPlugin } from './editor/codemirror-integration';
+import { createKeyPressPlugin } from './editor/key-press-plugin';
 import { DEFAULT_SETTINGS, WhichKeySettings, WhichKeySettingsTab } from './settings/settings-tab';
 
 const { log } = console;
@@ -54,7 +54,7 @@ export default class WhichKey extends Plugin {
     // Initialize shared state with the command trie
     this.sharedState = new SharedState(this.app, this.commandTrie, new WhichKeyUI());
 
-    this.registerEditorExtension(codeMirrorPlugin(this.sharedState));
+    this.registerEditorExtension(createKeyPressPlugin(this.sharedState));
 
     document.addEventListener('keydown', this.handleGlobalKeyPress, true);
 
