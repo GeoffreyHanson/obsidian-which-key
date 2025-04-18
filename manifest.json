@@ -1,9 +1,9 @@
 {
 	"id": "which-key-plugin",
-	"name": "WhichKey",
+	"name": "which-key",
 	"version": "0.9.0-beta",
 	"minAppVersion": "0.15.0",
-	"description": "Obsidian plugin for a which-key like menu",
+	"description": "Brings which-key functionality to Obsidian",
 	"author": "Geoffrey Hanson",
 	"authorUrl": "https://github.com/geoffreyhanson",
 	"fundingUrl": "",
