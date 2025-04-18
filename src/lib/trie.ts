@@ -1,4 +1,3 @@
-const { log } = console;
 import { PossibleCommands } from '../types';
 
 export class TrieNode {
@@ -24,11 +23,9 @@ export class CommandTrie {
   /** Get command id for a prefix */
   getCommandId(prefix: string[]): string | null {
     let current = this.root;
-    log('getting command for prefix:', prefix);
 
     for (const key of prefix) {
       if (!(key in current.children)) {
-        log('no child found for key:', key);
         return null;
       }
       current = current.children[key];

@@ -73,7 +73,6 @@ describe('CommandTrie', () => {
 
     it('should return matching commands for given prefix', () => {
       const results = trie.getPossibleCommands(['t']);
-      console.log(results);
       expect(results).toHaveLength(2);
       expect(results.map(r => r.key).sort()).toEqual(['1', '2']);
     });

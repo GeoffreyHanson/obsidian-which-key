@@ -7,8 +7,6 @@ import { SharedState } from './state/shared-state';
 import { createKeyPressPlugin } from './editor/key-press-plugin';
 import { DEFAULT_SETTINGS, WhichKeySettings, WhichKeySettingsTab } from './settings/settings-tab';
 
-const { log } = console;
-
 // Extend the App interface to include commands
 declare module 'obsidian' {
   interface App {
@@ -40,8 +38,6 @@ export default class WhichKey extends Plugin {
 
   async onload() {
     await this.loadSettings();
-
-    log(this.app);
 
     const leanCommands = shuckCommands(this.app.commands.commands);
 

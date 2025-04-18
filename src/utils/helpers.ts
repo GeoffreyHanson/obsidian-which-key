@@ -9,8 +9,6 @@ import {
   TopLevelMapping,
 } from '../types';
 
-const { log } = console;
-
 export function interceptKeyPress(event: KeyboardEvent) {
   event.preventDefault();
   event.stopPropagation();
@@ -118,8 +116,6 @@ export function determinePrefixes(
   prefixArray: string[],
   commandBucket: LeanCommand[]
 ): LeanCommand[] {
-  log('commandBucket', commandBucket);
-
   // Count prefix frequency
   const prefixCounts: Record<string, number> = {};
   const fallbackCounts: Record<string, number> = {};
@@ -164,11 +160,6 @@ export function determinePrefixes(
     fallbackPrefixes,
   });
 
-  /* Log unassigned commands for debugging */
-  const unassignedCommands = updatedCommands.filter(command => !command.prefix);
-  log('unassignedCommands', unassignedCommands);
-
-  log('commands with prefixes:', updatedCommands);
   return updatedCommands;
 }
 
@@ -209,11 +200,8 @@ export function buildCommandTrie(
   commands.forEach(command => {
     if (command.prefix) {
       commandTrie.insertCommand(command);
-    } else {
-      console.log('Skipping command without prefix:', command.name);
     }
   });
-  log('commandTrie', commandTrie);
   return commandTrie;
 }
 
@@ -231,8 +219,6 @@ export function curateCommands(
   intentMappings: IntentMapping[],
   commandTrie: any
 ): any {
-  console.log('all commands (curate):', commands);
-
   const curatedCommands: (LeanCommand | CategoryCommand)[] = [...topLevelMappings];
 
   for (const { prefix, name, pattern, icon } of intentMappings) {
@@ -320,7 +306,6 @@ export function assignCategoryPrefixes(
       break;
     }
   }
-  log('categoryMappings', categoryMappings);
   return categoryMappings;
 }
 
@@ -331,7 +316,6 @@ export function assignCategoryPrefixes(
  * @returns Populated CommandTrie instance
  */
 export function categorizeCommands(commands: LeanCommand[], commandTrie: any) {
-  log('all commands (categorize)', commands);
   // Group commands by category
   const categoryBuckets = createCategoryBuckets(commands);
 
