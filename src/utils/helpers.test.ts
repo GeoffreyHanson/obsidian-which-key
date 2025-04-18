@@ -19,6 +19,7 @@ import {
   type CuratedCommand,
   type ObsidianCommand,
   LeanCommand,
+  PossibleCommands,
 } from '../types';
 import { obsidianCommands } from '../__fixtures__/obsidian-commands';
 import { intentMappings, intentRegexes, topLevelMappings } from '../utils/constants';
@@ -557,7 +558,7 @@ describe('Helper Functions', () => {
 
       // Verify top level command prefixes are unique
       const allCommands = result.getPossibleCommands();
-      const prefixes = new Set(allCommands.map(cmd => cmd.key));
+      const prefixes = new Set(allCommands.map((command: PossibleCommands[number]) => command.key));
       expect(prefixes.size).toBe(allCommands.length);
     });
 
@@ -579,7 +580,7 @@ describe('Helper Functions', () => {
 
       // Verify each command got a unique prefix
       const commands = result.getPossibleCommands();
-      const prefixes = commands.map(cmd => cmd.key);
+      const prefixes = commands.map((command: PossibleCommands[number]) => command.key);
       const uniquePrefixes = new Set(prefixes);
       expect(uniquePrefixes.size).toBe(prefixes.length);
     });
@@ -596,11 +597,13 @@ describe('Helper Functions', () => {
       expect(result).toHaveProperty('app');
 
       // Test that categories contain respective commands
-      expect(result.editor.some(cmd => cmd.id === 'editor:save-file')).toBe(true);
-      expect(result.workspace.some(cmd => cmd.id === 'workspace:split-vertical')).toBe(true);
+      expect(result.editor.some(command => command.id === 'editor:save-file')).toBe(true);
+      expect(result.workspace.some(command => command.id === 'workspace:split-vertical')).toBe(
+        true
+      );
 
       // Test that the formatting of commands is preserved
-      const saveCommand = result.editor.find(cmd => cmd.id === 'editor:save-file');
+      const saveCommand = result.editor.find(command => command.id === 'editor:save-file');
       expect(saveCommand).toMatchObject({
         id: 'editor:save-file',
         name: 'Save current file',
@@ -762,7 +765,9 @@ describe('Helper Functions', () => {
       });
 
       // Verify we found all categories (no extras or missing ones)
-      const foundCategoryNames = categories.map(category => category.command.name);
+      const foundCategoryNames = categories.map(
+        (category: PossibleCommands[number]) => category.command.name
+      );
       expect(foundCategoryNames.sort()).toEqual(expectedCategories.sort());
     });
   });
