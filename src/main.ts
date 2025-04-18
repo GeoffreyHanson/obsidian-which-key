@@ -10,7 +10,6 @@ import { DEFAULT_SETTINGS, WhichKeySettings, WhichKeySettingsTab } from './setti
 const { log } = console;
 
 // Extend the App interface to include commands
-
 declare module 'obsidian' {
   interface App {
     commands: {

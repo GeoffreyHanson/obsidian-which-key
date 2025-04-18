@@ -1,6 +1,6 @@
 {
 	"name": "which-key-obsidian",
-	"version": "1.0.0",
+	"version": "0.9.0-beta",
 	"description": "Popup menu for displaying keybindings on the fly, bringing the functionality known to emacs and vim users to Obsidian.",
 	"main": "main.js",
 	"scripts": {
