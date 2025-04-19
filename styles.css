@@ -6,7 +6,8 @@
     overflow-y: auto;
     background-color: var(--background-secondary);
     border-color: var(--modal-border-color);
-    /* z-index: 100; */
+    color: var(--text-normal);
+    z-index: 100;
 }
 
 .which-key-command {
