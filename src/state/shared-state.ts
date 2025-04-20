@@ -20,6 +20,10 @@ export class SharedState {
     this.ui = ui;
   }
 
+  updateCommandTrie(commandTrie: CommandTrie) {
+    this.commandTrie = commandTrie;
+  }
+
   startRecording() {
     this.isRecording = true;
     this.currentKeySequence = [];

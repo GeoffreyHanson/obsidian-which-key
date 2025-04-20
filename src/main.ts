@@ -20,7 +20,8 @@ declare module 'obsidian' {
 export default class WhichKey extends Plugin {
   settings: WhichKeySettings;
   sharedState: SharedState;
-  commandTrie: CommandTrie;
+  curatedTrie: CommandTrie;
+  categorizedTrie: CommandTrie;
 
   handleGlobalKeyPress = (event: KeyboardEvent) => {
     // Don't handle key presses when editor has focus
@@ -41,13 +42,18 @@ export default class WhichKey extends Plugin {
 
     const leanCommands = shuckCommands(this.app.commands.commands);
 
-    // Create the command trie
-    this.commandTrie = this.settings.categorizedCommands
-      ? categorizeCommands(leanCommands, new CommandTrie())
-      : curateCommands(leanCommands, topLevelMappings, intentMappings, new CommandTrie());
+    // Create command tries
+    this.curatedTrie = curateCommands(
+      leanCommands,
+      topLevelMappings,
+      intentMappings,
+      new CommandTrie()
+    );
+    this.categorizedTrie = categorizeCommands(leanCommands, new CommandTrie());
 
-    // Initialize shared state with the command trie
-    this.sharedState = new SharedState(this.app, this.commandTrie, new WhichKeyUI());
+    // Initialize shared state
+    const activeTrie = this.settings.categorizedCommands ? this.categorizedTrie : this.curatedTrie;
+    this.sharedState = new SharedState(this.app, activeTrie, new WhichKeyUI());
 
     this.registerEditorExtension(createKeyPressPlugin(this.sharedState));
 
@@ -72,5 +78,9 @@ export default class WhichKey extends Plugin {
 
   async saveSettings() {
     await this.saveData(this.settings);
+
+    // Update shared state with new settings
+    const activeTrie = this.settings.categorizedCommands ? this.categorizedTrie : this.curatedTrie;
+    this.sharedState.updateCommandTrie(activeTrie);
   }
 }
