@@ -65,7 +65,8 @@ export default class WhichKey extends Plugin {
       callback: () => this.sharedState.startRecording(),
     });
 
-    this.addSettingTab(new WhichKeySettingsTab(this.app, this));
+    // Re-enable for hotkey overrides/categorized commands
+    // this.addSettingTab(new WhichKeySettingsTab(this.app, this));
   }
 
   onunload() {
