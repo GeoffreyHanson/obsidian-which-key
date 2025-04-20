@@ -1,5 +1,8 @@
 # Obsidian Which-Key
 
+<!-- ![GitHub Release](https://img.shields.io/github/v/release/GeoffreyHanson/obsidian-which-key) -->
+<!-- ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/GeoffreyHanson/obsidian-which-key/total) -->
+
 ## Introduction
 
 Brings which-key functionality familiar to Vim and Emacs users to Obsidian.
