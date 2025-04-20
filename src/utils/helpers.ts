@@ -238,13 +238,14 @@ export function curateCommands(
   const remainingCommands = commands.filter(command => !curatedIds.has(command.id));
 
   if (remainingCommands.length > 0) {
-    curatedCommands.push({
-      prefix: ['M'],
-      name: 'Miscellaneous',
+    const extraCommands = {
+      prefix: ['x'],
+      name: 'Extras',
       id: undefined,
       icon: 'circle-help',
-    } as CategoryCommand);
-    curatedCommands.push(...determinePrefixes(['M'], remainingCommands));
+    };
+    curatedCommands.push(extraCommands);
+    curatedCommands.push(...determinePrefixes(extraCommands.prefix, remainingCommands));
   }
 
   return buildCommandTrie(curatedCommands, commandTrie);
