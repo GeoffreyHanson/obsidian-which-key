@@ -1,5 +1,3 @@
-import { Editor, MarkdownView } from 'obsidian';
-
 export interface CommandNode {
   name: string;
   id?: string;
@@ -11,29 +9,6 @@ export type PossibleCommands = {
   key: string;
   command: CommandNode;
 }[];
-
-export interface CategorizedCommand {
-  name: string;
-  id: string;
-  icon: string;
-  hotkeys: string[];
-  callback?: any;
-}
-
-export interface ObsidianCommand {
-  id: string;
-  name: string;
-  icon?: string;
-  hotkeys?: { modifiers: string[]; key: string }[];
-  callback?: (...args: any[]) => any;
-  editorCallback?: (editor: Editor, view: MarkdownView) => any;
-  checkCallback?: (checking: boolean) => boolean | void;
-}
-
-export interface ObsidianCommands {
-  commands: Record<string, ObsidianCommand>;
-  executeCommandById(id: string): boolean;
-}
 
 export interface TopLevelMapping {
   prefix: string[];

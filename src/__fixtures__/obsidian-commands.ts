@@ -1,4 +1,6 @@
-export const obsidianCommands = {
+import { Command } from 'obsidian';
+
+export const obsidianCommands: Record<string, Command> = {
   'editor:save-file': {
     id: 'editor:save-file',
     name: 'Save current file',
@@ -554,21 +556,16 @@ export const obsidianCommands = {
     id: 'editor:toggle-fold',
     name: 'Toggle fold on the current line',
     icon: 'lucide-diff',
-    allowProperties: true,
   },
   'editor:fold-all': {
     id: 'editor:fold-all',
     name: 'Fold all headings and lists',
     icon: 'lucide-minimize-2',
-    allowPreview: true,
-    allowProperties: true,
   },
   'editor:unfold-all': {
     id: 'editor:unfold-all',
     name: 'Unfold all headings and lists',
     icon: 'lucide-maximize-2',
-    allowPreview: true,
-    allowProperties: true,
   },
   'editor:fold-less': {
     id: 'editor:fold-less',
@@ -1063,7 +1060,6 @@ export const obsidianCommands = {
         key: 'P',
       },
     ],
-    showOnMobileToolbar: true,
   },
   'bookmarks:open': {
     id: 'bookmarks:open',

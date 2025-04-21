@@ -1,3 +1,4 @@
+import { Command } from 'obsidian';
 import { CommandTrie } from 'src/lib/trie';
 import {
   CategoryBuckets,
@@ -5,7 +6,6 @@ import {
   CategoryMappings,
   IntentMapping,
   LeanCommand,
-  ObsidianCommand,
   PrefixAssignmentContext,
   TopLevelMapping,
 } from '../types';
@@ -164,7 +164,7 @@ export function determinePrefixes(
  * @param commands - Raw commands object from Obsidian
  * @returns Array of standardized commands
  */
-export function shuckCommands(commands: Record<string, ObsidianCommand>): LeanCommand[] {
+export function shuckCommands(commands: Record<string, Command>): LeanCommand[] {
   return Object.values(commands).map(({ name, id, icon, hotkeys }) => ({
     name,
     id,

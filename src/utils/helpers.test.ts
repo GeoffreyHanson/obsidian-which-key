@@ -1,23 +1,24 @@
+import { Command } from 'obsidian';
+import { obsidianCommands } from '../__fixtures__/obsidian-commands';
+import { CommandTrie } from '../lib/trie';
+import { LeanCommand, PossibleCommands, PrefixAssignmentContext } from '../types';
+import { intentMappings, intentRegexes, topLevelMappings } from '../utils/constants';
 import {
+  assignCategoryPrefixes,
+  assignPrefixesToCommands,
+  buildCommandTrie,
+  categorizeCommands,
+  createCategoryBuckets,
+  curateCommands,
   determinePrefixes,
   extractIdFirstLetters,
   extractNameFirstLetters,
   extractNameRemainingLetters,
-  generateSortedPrefixes,
-  assignPrefixesToCommands,
-  shuckCommands,
-  buildCommandTrie,
   filterCommandsByIntent,
-  createCategoryBuckets,
   generateCategoryPrefixOptions,
-  assignCategoryPrefixes,
-  categorizeCommands,
-  curateCommands,
+  generateSortedPrefixes,
+  shuckCommands,
 } from './helpers';
-import { PrefixAssignmentContext, ObsidianCommand, LeanCommand, PossibleCommands } from '../types';
-import { obsidianCommands } from '../__fixtures__/obsidian-commands';
-import { intentMappings, intentRegexes, topLevelMappings } from '../utils/constants';
-import { CommandTrie } from '../lib/trie';
 
 const commandsWithoutIds = shuckCommands(obsidianCommands);
 
@@ -111,7 +112,7 @@ describe('Helper Functions', () => {
 
   describe('assignPrefixesToCommands', () => {
     it('should assign prefixes based on availability', () => {
-      const commands: ObsidianCommand[] = [
+      const commandBucket: LeanCommand[] = [
         { id: 'file:open', name: 'Open' },
         { id: 'file:save', name: 'Save' },
       ];
@@ -122,8 +123,8 @@ describe('Helper Functions', () => {
       const prefixesToAssign = new Set(['o', 'O', 's', 'S', 'a', 'A', 'v', 'V', 'e', 'E']);
       const parentPrefix = ['f'];
       const context: PrefixAssignmentContext = {
-        parentPrefix: parentPrefix,
-        commandBucket: commands,
+        parentPrefix,
+        commandBucket,
         prefixesToAssign,
         preferredPrefixes,
         fallbackPrefixes,
@@ -136,7 +137,7 @@ describe('Helper Functions', () => {
     });
 
     it('should assign prefixes from least to most common', () => {
-      const commands: ObsidianCommand[] = [
+      const commandBucket: LeanCommand[] = [
         { id: 'cmd:rare', name: 'Rare Command' },
         { id: 'cmd:common', name: 'Common Command' },
       ];
@@ -167,7 +168,7 @@ describe('Helper Functions', () => {
       const parentPrefix = ['x'];
 
       const context: PrefixAssignmentContext = {
-        commandBucket: commands,
+        commandBucket,
         preferredPrefixes: preferredPrefixes,
         fallbackPrefixes,
         prefixesToAssign,
@@ -183,7 +184,7 @@ describe('Helper Functions', () => {
     });
 
     it('should skip commands that already have a prefix', () => {
-      const commands: LeanCommand[] = [
+      const commandBucket: LeanCommand[] = [
         { id: 'cmd:first', name: 'First Command', prefix: ['x', 'y'] },
         { id: 'cmd:second', name: 'Second Command' },
       ];
@@ -218,7 +219,7 @@ describe('Helper Functions', () => {
       const parentPrefix = ['z'];
 
       const context: PrefixAssignmentContext = {
-        commandBucket: commands,
+        commandBucket,
         preferredPrefixes,
         fallbackPrefixes,
         prefixesToAssign,
@@ -234,7 +235,7 @@ describe('Helper Functions', () => {
     });
 
     it('should handle case-insensitive prefix matching', () => {
-      const commands: ObsidianCommand[] = [{ id: 'app:test', name: 'Test App' }];
+      const commandBucket: LeanCommand[] = [{ id: 'app:test', name: 'Test App' }];
 
       const preferredPrefixes = [new Set(['t', 'a'])];
       const fallbackPrefixes = [new Set(['e', 's'])];
@@ -244,7 +245,7 @@ describe('Helper Functions', () => {
       const parentPrefix = ['a'];
 
       const context: PrefixAssignmentContext = {
-        commandBucket: commands,
+        commandBucket,
         preferredPrefixes,
         fallbackPrefixes,
         prefixesToAssign,
@@ -286,18 +287,31 @@ describe('Helper Functions', () => {
 
   describe('shuckCommands', () => {
     it('should shuck key and keep value', () => {
-      const rawCommands = {
-        cmd1: {
-          name: 'Command 1',
-          id: 'cmd1',
-          icon: 'icon1',
-          hotkeys: [{ modifiers: ['Ctrl'], key: 'A' }],
+      const rawCommands: Record<string, Command> = {
+        'editor:save-file': {
+          id: 'editor:save-file',
+          name: 'Save current file',
+          hotkeys: [
+            {
+              modifiers: ['Mod'],
+              key: 'S',
+            },
+          ],
         },
-        cmd2: {
-          name: 'Command 2',
-          id: 'cmd2',
-          icon: 'icon2',
-          hotkeys: [{ modifiers: ['Ctrl'], key: 'B' }],
+        'workspace:next-tab': {
+          id: 'workspace:next-tab',
+          name: 'Go to next tab',
+          icon: 'lucide-arrow-right',
+          hotkeys: [
+            {
+              modifiers: ['Ctrl'],
+              key: 'Tab',
+            },
+            {
+              modifiers: ['Meta', 'Shift'],
+              key: ']',
+            },
+          ],
         },
       };
 
@@ -305,16 +319,29 @@ describe('Helper Functions', () => {
 
       expect(result).toEqual([
         {
-          name: 'Command 1',
-          id: 'cmd1',
-          icon: 'icon1',
-          hotkeys: [{ modifiers: ['Ctrl'], key: 'A' }],
+          id: 'editor:save-file',
+          name: 'Save current file',
+          hotkeys: [
+            {
+              modifiers: ['Mod'],
+              key: 'S',
+            },
+          ],
         },
         {
-          name: 'Command 2',
-          id: 'cmd2',
-          icon: 'icon2',
-          hotkeys: [{ modifiers: ['Ctrl'], key: 'B' }],
+          id: 'workspace:next-tab',
+          name: 'Go to next tab',
+          icon: 'lucide-arrow-right',
+          hotkeys: [
+            {
+              modifiers: ['Ctrl'],
+              key: 'Tab',
+            },
+            {
+              modifiers: ['Meta', 'Shift'],
+              key: ']',
+            },
+          ],
         },
       ]);
     });
@@ -660,7 +687,7 @@ describe('Helper Functions', () => {
 
   describe('assignCategoryPrefixes', () => {
     test('should assign unique prefixes to categories', () => {
-      const sortedCategories: [string, ObsidianCommand[]][] = [
+      const sortedCategories: [string, LeanCommand[]][] = [
         ['editor', [{ id: 'editor:format', name: 'Format' }]],
         ['file', [{ id: 'file:open', name: 'Open' }]],
       ];
@@ -676,7 +703,7 @@ describe('Helper Functions', () => {
     });
 
     test('should handle prefix collisions by using next available prefix', () => {
-      const sortedCategories: [string, ObsidianCommand[]][] = [
+      const sortedCategories: [string, LeanCommand[]][] = [
         ['editor', [{ id: 'editor:format', name: 'Format' }]],
         ['explorer', [{ id: 'explorer:open', name: 'Open' }]],
       ];
@@ -690,7 +717,7 @@ describe('Helper Functions', () => {
     });
 
     test('should handle hyphenated category names', () => {
-      const sortedCategories: [string, ObsidianCommand[]][] = [
+      const sortedCategories: [string, LeanCommand[]][] = [
         ['file-explorer', [{ id: 'file-explorer:open', name: 'Open' }]],
       ];
 
@@ -702,7 +729,7 @@ describe('Helper Functions', () => {
     });
 
     test('should handle multiple commands in a category', () => {
-      const sortedCategories: [string, ObsidianCommand[]][] = [
+      const sortedCategories: [string, LeanCommand[]][] = [
         [
           'file',
           [

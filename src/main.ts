@@ -1,11 +1,11 @@
-import { Plugin, MarkdownView } from 'obsidian';
-import { categorizeCommands, curateCommands, shuckCommands } from './utils/helpers';
-import { intentMappings, topLevelMappings } from './utils/constants';
-import { CommandTrie } from './lib/trie';
-import { WhichKeyUI } from './ui/which-key-ui';
-import { SharedState } from './state/shared-state';
+import { MarkdownView, Plugin } from 'obsidian';
 import { initializeEditorListener } from './editor/editor-listener';
+import { CommandTrie } from './lib/trie';
 import { DEFAULT_SETTINGS, WhichKeySettings } from './settings/settings-tab';
+import { SharedState } from './state/shared-state';
+import { WhichKeyUI } from './ui/which-key-ui';
+import { intentMappings, topLevelMappings } from './utils/constants';
+import { categorizeCommands, curateCommands, shuckCommands } from './utils/helpers';
 
 // Extend the App interface to include commands & executeCommandById
 declare module 'obsidian' {
