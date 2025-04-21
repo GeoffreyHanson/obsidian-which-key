@@ -1,6 +1,5 @@
 import { Editor, MarkdownView } from 'obsidian';
 
-// Define types for the WhichKey mappings
 export interface CommandNode {
   name: string;
   id?: string;

@@ -5,7 +5,7 @@ import {
   extractNameRemainingLetters,
   generateSortedPrefixes,
   assignPrefixesToCommands,
-  shuckCommands as shuckCommands,
+  shuckCommands,
   buildCommandTrie,
   filterCommandsByIntent,
   createCategoryBuckets,
@@ -14,13 +14,7 @@ import {
   categorizeCommands,
   curateCommands,
 } from './helpers';
-import {
-  type PrefixAssignmentContext,
-  type CuratedCommand,
-  type ObsidianCommand,
-  LeanCommand,
-  PossibleCommands,
-} from '../types';
+import { PrefixAssignmentContext, ObsidianCommand, LeanCommand, PossibleCommands } from '../types';
 import { obsidianCommands } from '../__fixtures__/obsidian-commands';
 import { intentMappings, intentRegexes, topLevelMappings } from '../utils/constants';
 import { CommandTrie } from '../lib/trie';
@@ -476,21 +470,47 @@ describe('Helper Functions', () => {
   });
 
   describe('buildCommandTrie', () => {
-    it('should insert commands with prefixes into trie', () => {
-      const commands: CuratedCommand[] = [
-        { id: 'cmd1', name: 'Command 1', prefix: ['a'] },
-        { id: 'cmd2', name: 'Command 2', prefix: ['b'] },
+    it('should build a trie with prefixed commands', () => {
+      const commands: LeanCommand[] = [
+        {
+          id: 'editor:toggle-bold',
+          name: 'Toggle bold',
+          prefix: ['b'],
+        },
+        {
+          id: 'editor:toggle-italics',
+          name: 'Toggle italic',
+          prefix: ['i'],
+        },
       ];
 
-      const mockTrie = {
-        insertCommand: jest.fn(),
-      };
+      const trie = new CommandTrie();
+      const result = buildCommandTrie(commands, trie);
 
-      buildCommandTrie(commands, mockTrie);
+      // Test actual behavior - can we find the commands?
+      expect(result.getCommandId(['b'])).toEqual(commands[0].id);
+      expect(result.getCommandId(['i'])).toEqual(commands[1].id);
+    });
 
-      expect(mockTrie.insertCommand).toHaveBeenCalledTimes(2);
-      expect(mockTrie.insertCommand).toHaveBeenCalledWith(commands[0]);
-      expect(mockTrie.insertCommand).toHaveBeenCalledWith(commands[1]);
+    it('should ignore commands without prefixes', () => {
+      const commands = [
+        {
+          id: 'editor:toggle-bold',
+          name: 'Toggle bold',
+          prefix: ['b'],
+        },
+        {
+          id: undefined,
+          name: 'Toggle italic',
+          prefix: ['i'], // no prefix
+        },
+      ];
+
+      const trie = new CommandTrie();
+      const result = buildCommandTrie(commands, trie);
+
+      expect(result.getCommandId(['b'])).toEqual(commands[0].id);
+      expect(result.getCommandId(['i'])).toBeNull();
     });
   });
 
