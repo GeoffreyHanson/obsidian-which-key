@@ -1,3 +1,4 @@
+import { CommandTrie } from 'src/lib/trie';
 import {
   CategoryBuckets,
   CategoryCommand,
@@ -8,11 +9,6 @@ import {
   PrefixAssignmentContext,
   TopLevelMapping,
 } from '../types';
-
-export function interceptKeyPress(event: KeyboardEvent) {
-  event.preventDefault();
-  event.stopPropagation();
-}
 
 /**
  * Extract first letters from command ID (after the colon and split by hyphens)
@@ -195,8 +191,8 @@ export function filterCommandsByIntent(commands: LeanCommand[], pattern: RegExp)
  */
 export function buildCommandTrie(
   commands: (LeanCommand | CategoryCommand)[],
-  commandTrie: any
-): any {
+  commandTrie: CommandTrie
+): CommandTrie {
   commands.forEach(command => {
     if (command.prefix) {
       commandTrie.insertCommand(command);
@@ -207,7 +203,7 @@ export function buildCommandTrie(
 
 /**
  * Curate commands by applying intent mappings and building a command trie
- * @param commands - Raw commands from Obsidian
+ * @param commands - Stripped commands from Obsidian
  * @param topLevelMappings - Array of top-level command mappings
  * @param intentMappings - Array of intent-based command mappings
  * @param CommandTrie - CommandTrie class constructor
@@ -217,8 +213,8 @@ export function curateCommands(
   commands: LeanCommand[],
   topLevelMappings: TopLevelMapping[],
   intentMappings: IntentMapping[],
-  commandTrie: any
-): any {
+  commandTrie: CommandTrie
+): CommandTrie {
   const curatedCommands: (LeanCommand | CategoryCommand)[] = [...topLevelMappings];
 
   for (const { prefix, name, pattern, icon } of intentMappings) {
@@ -312,11 +308,11 @@ export function assignCategoryPrefixes(
 
 /**
  * Categorize commands and build command trie
- * @param commands - Raw commands from Obsidian
- * @param CommandTrie - CommandTrie class instance
+ * @param commands - Stripped commands from Obsidian
+ * @param commandTrie - CommandTrie class instance
  * @returns Populated CommandTrie instance
  */
-export function categorizeCommands(commands: LeanCommand[], commandTrie: any) {
+export function categorizeCommands(commands: LeanCommand[], commandTrie: CommandTrie): CommandTrie {
   // Group commands by category
   const categoryBuckets = createCategoryBuckets(commands);
 

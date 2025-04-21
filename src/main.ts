@@ -4,10 +4,10 @@ import { intentMappings, topLevelMappings } from './utils/constants';
 import { CommandTrie } from './lib/trie';
 import { WhichKeyUI } from './ui/which-key-ui';
 import { SharedState } from './state/shared-state';
-import { createKeyPressPlugin } from './editor/key-press-plugin';
-import { DEFAULT_SETTINGS, WhichKeySettings, WhichKeySettingsTab } from './settings/settings-tab';
+import { initializeEditorListener } from './editor/editor-listener';
+import { DEFAULT_SETTINGS, WhichKeySettings } from './settings/settings-tab';
 
-// Extend the App interface to include commands
+// Extend the App interface to include commands & executeCommandById
 declare module 'obsidian' {
   interface App {
     commands: {
@@ -19,12 +19,16 @@ declare module 'obsidian' {
 
 export default class WhichKey extends Plugin {
   settings: WhichKeySettings;
-  sharedState: SharedState;
+  state: SharedState;
   curatedTrie: CommandTrie;
   categorizedTrie: CommandTrie;
 
-  handleGlobalKeyPress = (event: KeyboardEvent) => {
-    // Don't handle key presses when editor has focus
+  /**
+   * Handle key presses on the document when the editor is not focused
+   * @param event - Keyboard event
+   * @returns void
+   */
+  handleGlobalKeyPress = (event: KeyboardEvent): void => {
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
     const editorHasFocus = activeView?.editor?.hasFocus();
     if (editorHasFocus) {
@@ -32,8 +36,8 @@ export default class WhichKey extends Plugin {
     }
 
     // If the hotkey is pressed, update the key sequence
-    if (this.sharedState.isRecording) {
-      this.sharedState.updateKeySequence(event);
+    if (this.state.isRecording) {
+      this.state.updateKeySequence(event);
     }
   };
 
@@ -53,19 +57,19 @@ export default class WhichKey extends Plugin {
 
     // Initialize shared state
     const activeTrie = this.settings.categorizedCommands ? this.categorizedTrie : this.curatedTrie;
-    this.sharedState = new SharedState(this.app, activeTrie, new WhichKeyUI());
+    this.state = new SharedState(this.app, activeTrie, new WhichKeyUI());
 
-    this.registerEditorExtension(createKeyPressPlugin(this.sharedState));
+    this.registerEditorExtension(initializeEditorListener(this.state));
 
     document.addEventListener('keydown', this.handleGlobalKeyPress, true);
 
     this.addCommand({
       id: 'open-which-key',
       name: 'Open WhichKey',
-      callback: () => this.sharedState.startRecording(),
+      callback: () => this.state.startRecording(),
     });
 
-    // Re-enable for hotkey overrides/categorized commands
+    // To be re-enabled for hotkey overrides/categorized commands
     // this.addSettingTab(new WhichKeySettingsTab(this.app, this));
   }
 
@@ -82,6 +86,6 @@ export default class WhichKey extends Plugin {
 
     // Update shared state with new settings
     const activeTrie = this.settings.categorizedCommands ? this.categorizedTrie : this.curatedTrie;
-    this.sharedState.updateCommandTrie(activeTrie);
+    this.state.updateCommandTrie(activeTrie);
   }
 }

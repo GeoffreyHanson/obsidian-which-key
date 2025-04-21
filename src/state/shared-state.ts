@@ -20,10 +20,17 @@ export class SharedState {
     this.ui = ui;
   }
 
+  /**
+   * Update the active command trie
+   * @param commandTrie - The command trie
+   */
   updateCommandTrie(commandTrie: CommandTrie) {
     this.commandTrie = commandTrie;
   }
 
+  /**
+   * Start recording key presses
+   */
   startRecording() {
     this.isRecording = true;
     this.currentKeySequence = [];
@@ -31,12 +38,19 @@ export class SharedState {
     this.ui.showCommands(commands);
   }
 
-  resetState() {
+  /**
+   * Stop recording key presses, reset relevant state
+   */
+  stopRecording() {
     this.isRecording = false;
     this.currentKeySequence = [];
     this.ui.hideCommands();
   }
 
+  /**
+   * Intercept key presses, preventing default behavior
+   * @param event - Keyboard event
+   */
   interceptKeyPress = (event: KeyboardEvent) => {
     event.preventDefault();
     event.stopPropagation();
@@ -62,12 +76,16 @@ export class SharedState {
     }
   };
 
+  /**
+   * Update the key sequence array & execute if possible
+   * @param event - Keyboard event
+   */
   updateKeySequence(event: KeyboardEvent) {
     const { key } = event;
 
     // Reset state when escape is pressed
     if (key === KEYS.ESCAPE) {
-      this.resetState();
+      this.stopRecording();
       return;
     }
 
@@ -86,10 +104,10 @@ export class SharedState {
 
     if (commandId) {
       this.app.commands.executeCommandById(commandId);
-      this.resetState();
+      this.stopRecording();
     } else if (commands.length === 0) {
       // No possible completions, reset
-      this.resetState();
+      this.stopRecording();
     }
   }
 }
