@@ -7,8 +7,8 @@
 
 Brings which-key functionality familiar to Vim and Emacs users to Obsidian.
 
-![which-key-leader-example](.github/dark-mode-leader.png)
-![which-key-s-example](.github/dark-mode-s.png)
+![which-key-leader-example](.github/assets/dark-mode-leader.png)
+![which-key-s-example](.github/assets/dark-mode-s.png)
 
 Which-key provides direct access to all of Obsidian's commands through a sequence of keystrokes, each stroke displaying a menu of potential commands for the next keystroke.
 
