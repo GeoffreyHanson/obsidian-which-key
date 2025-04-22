@@ -18,7 +18,8 @@ If Vim mode is enabled, which-key emulates spacemacs/vim by triggering when Spac
 
 ## Installation
 
-Which-key is currently in beta. Either:
+Which-key is currently in beta. Until it is released to the Obsidian app store, either:
 
-- Clone this repository into the `.obsidian/plugins` folder of the desired vault.
+- Download the [latest release](https://github.com/geoffreyhanson/obsidian-which-key/releases) and extract it into the `.obsidian/plugins` folder of the desired vault.
+- Clone this repository directly into `.obsidian/plugins`.
 - Download the repository as a zip file and extract it into `.obsidian/plugins`.
