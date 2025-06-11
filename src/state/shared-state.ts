@@ -65,9 +65,7 @@ export class SharedState {
     const editorHasFocus = activeView?.editor.hasFocus();
     // @ts-ignore - Accessing internal CodeMirror state
     const isVimMode = activeView?.editor?.cm?.cm?.state?.vim;
-    // @ts-ignore - Accessing internal CodeMirror state
     const isInsertMode = isVimMode?.insertMode;
-    // const insertMode = activeView?.editor?.cm?.cm?.state?.vim?.insertMode;
 
     if (this.isRecording) {
       this.updateKeySequence(event);
