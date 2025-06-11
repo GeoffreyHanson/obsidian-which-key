@@ -66,14 +66,14 @@ export class SharedState {
     // @ts-ignore - Accessing internal CodeMirror state
     const isVimMode = activeView?.editor?.cm?.cm?.state?.vim;
     // @ts-ignore - Accessing internal CodeMirror state
-    const insertMode = isVimMode?.insertMode;
+    const isInsertMode = isVimMode?.insertMode;
     // const insertMode = activeView?.editor?.cm?.cm?.state?.vim?.insertMode;
 
     if (this.isRecording) {
       this.updateKeySequence(event);
     }
     // Start recording when space is pressed and using vim
-    else if (isVimMode && !insertMode && editorHasFocus && event.key === KEYS.SPACE) {
+    else if (isVimMode && !isInsertMode && editorHasFocus && event.key === KEYS.SPACE) {
       this.startRecording();
       this.interceptKeyPress(event);
     }
