@@ -1,4 +1,4 @@
-import { EditorView, PluginValue, ViewPlugin, ViewUpdate } from '@codemirror/view';
+import { EditorView, PluginValue, ViewPlugin } from '@codemirror/view';
 import { SharedState } from '../state/shared-state';
 
 /**
@@ -16,12 +16,6 @@ export class EditorListener implements PluginValue {
     this.view = view;
     // Needed to pick up key presses inside the editor
     view.dom.addEventListener('keydown', EditorListener.state.handleKeyPress, true);
-  }
-
-  update(update: ViewUpdate) {
-    // @ts-ignore - not typed
-    const insertMode = update?.view?.cm?.state?.vim?.insertMode;
-    EditorListener.state.insertMode = insertMode;
   }
 
   destroy() {
